@@ -763,21 +763,48 @@
         </button>
       </div>
 
-      <!-- Local Network URL Box -->
-      <div class="space-y-2">
-        <label class="text-xs font-bold text-slate-300 flex items-center justify-between">
-          <span>Type this into your Kindle's Web Browser:</span>
-          <span class="text-[10px] text-emerald-400 font-mono">Home Wi-Fi</span>
-        </label>
-        <div class="flex items-center justify-between gap-2 p-3 rounded-2xl bg-dark-surface border-2 border-emerald-500/40">
-          <span id="kindleHubUrlText" class="font-mono text-sm sm:text-base font-extrabold text-emerald-300 truncate">http://172.20.1.160:8000/kindle</span>
-          <button 
-            onclick="copyKindleHubUrl()" 
-            id="copyHubUrlBtn"
-            class="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs shrink-0 active:scale-95 transition-all"
-          >
-            Copy Link
-          </button>
+      <!-- URL Display Boxes -->
+      <div class="space-y-3">
+        <!-- Public Internet Link (Easiest) -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+              <i data-lucide="globe" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span>Best for Kindle Browser (HTTPS Link):</span>
+            </span>
+            <span class="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-extrabold">Recommended</span>
+          </div>
+          <div class="flex items-center justify-between gap-2 p-2.5 rounded-2xl bg-dark-surface border-2 border-emerald-500/40">
+            <span id="kindleHubPublicUrlText" class="font-mono text-xs sm:text-sm font-extrabold text-emerald-300 truncate">https://.../k</span>
+            <button 
+              onclick="copyPublicKindleUrl()" 
+              id="copyPublicUrlBtn"
+              class="px-3 py-1 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs shrink-0 active:scale-95 transition-all"
+            >
+              Copy
+            </button>
+          </div>
+        </div>
+
+        <!-- Local Home Wi-Fi Link -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+              <i data-lucide="wifi" class="w-3.5 h-3.5 text-slate-400"></i>
+              <span>Local Home Wi-Fi Link (HTTP only):</span>
+            </span>
+            <span class="text-[10px] text-amber-400 font-mono">No https://</span>
+          </div>
+          <div class="flex items-center justify-between gap-2 p-2.5 rounded-2xl bg-dark-surface border border-dark-border">
+            <span id="kindleHubLocalUrlText" class="font-mono text-xs sm:text-sm font-semibold text-slate-300 truncate">http://172.20.1.160:8000/kindle</span>
+            <button 
+              onclick="copyLocalKindleUrl()" 
+              id="copyLocalUrlBtn"
+              class="px-3 py-1 rounded-xl bg-dark-card hover:bg-dark-border text-slate-200 font-bold text-xs shrink-0 border border-dark-border active:scale-95 transition-all"
+            >
+              Copy
+            </button>
+          </div>
         </div>
       </div>
 
@@ -785,13 +812,12 @@
       <div class="space-y-2.5 p-4 rounded-2xl bg-dark-surface/60 border border-dark-border text-xs text-slate-300">
         <p class="font-bold text-white text-sm flex items-center gap-1.5">
           <i data-lucide="sparkles" class="w-4 h-4 text-emerald-400"></i>
-          <span>How to download directly onto your Kindle:</span>
+          <span>How to open on your Kindle:</span>
         </p>
         <ol class="space-y-2 pl-4 list-decimal marker:text-emerald-400 marker:font-bold">
-          <li>Make sure your Kindle is connected to your **home Wi-Fi**.</li>
-          <li>On your Kindle, tap the top-right menu (<strong>⋮</strong>) &rarr; tap <strong>Web Browser</strong> (or Experimental Browser).</li>
-          <li>Type the address above: <strong id="kindleHubUrlMini" class="text-emerald-300 font-mono">http://.../kindle</strong></li>
-          <li>Tap <strong>"Download to Kindle"</strong> on any manga &mdash; the entire book downloads directly into your Kindle storage at maximum Wi-Fi speed!</li>
+          <li>On your Kindle, tap top-right menu (<strong>⋮</strong>) &rarr; tap <strong>Web Browser</strong>.</li>
+          <li>Type the <strong>HTTPS Link</strong> above (e.g. <strong id="kindleHubUrlMini" class="text-emerald-300 font-mono">https://.../k</strong>).</li>
+          <li>Tap <strong>"Download to Kindle"</strong> on any manga &mdash; the entire book downloads straight into your Kindle storage!</li>
         </ol>
       </div>
 

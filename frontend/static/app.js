@@ -1266,28 +1266,25 @@ async function openKindleHubModal() {
     safeCreateIcons();
   }
 
-  const urlText = document.getElementById("kindleHubUrlText");
+  const publicUrlText = document.getElementById("kindleHubPublicUrlText");
+  const localUrlText = document.getElementById("kindleHubLocalUrlText");
   const urlMini = document.getElementById("kindleHubUrlMini");
   const previewBtn = document.getElementById("previewKindleHubBtn");
 
   const currentOrigin = window.location.origin;
-  let hubUrl = cachedHubUrl || `${currentOrigin}/kindle`;
+  const publicHubUrl = `${currentOrigin}/k`;
+  let localHubUrl = `http://127.0.0.1:8000/kindle`;
 
-  if (urlText) urlText.textContent = hubUrl;
-  if (urlMini) urlMini.textContent = hubUrl;
-  if (previewBtn) previewBtn.href = hubUrl;
+  if (publicUrlText) publicUrlText.textContent = publicHubUrl;
+  if (urlMini) urlMini.textContent = publicHubUrl;
+  if (previewBtn) previewBtn.href = publicHubUrl;
 
   try {
     const res = await fetch("/api/network/ip");
     if (res.ok) {
       const data = await res.json();
-      if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-        hubUrl = data.hub_url || hubUrl;
-      }
-      cachedHubUrl = hubUrl;
-      if (urlText) urlText.textContent = hubUrl;
-      if (urlMini) urlMini.textContent = hubUrl;
-      if (previewBtn) previewBtn.href = hubUrl;
+      localHubUrl = data.hub_url || `http://${data.local_ip}:8000/kindle`;
+      if (localUrlText) localUrlText.textContent = localHubUrl;
     }
   } catch (e) {
     console.error("Network IP lookup error:", e);
@@ -1299,15 +1296,24 @@ function closeKindleHubModal() {
   if (modal) modal.classList.add("hidden");
 }
 
-function copyKindleHubUrl() {
-  const url = cachedHubUrl || document.getElementById("kindleHubUrlText")?.textContent || "";
-  if (url) {
-    navigator.clipboard.writeText(url).then(() => {
-      const btn = document.getElementById("copyHubUrlBtn");
+function copyPublicKindleUrl() {
+  const text = document.getElementById("kindleHubPublicUrlText")?.textContent || "";
+  copyTextWithFeedback(text, "copyPublicUrlBtn");
+}
+
+function copyLocalKindleUrl() {
+  const text = document.getElementById("kindleHubLocalUrlText")?.textContent || "";
+  copyTextWithFeedback(text, "copyLocalUrlBtn");
+}
+
+function copyTextWithFeedback(text, btnId) {
+  if (text) {
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById(btnId);
       if (btn) {
         const orig = btn.textContent;
         btn.textContent = "Copied! ✓";
-        btn.classList.add("bg-emerald-300");
+        btn.classList.add("bg-emerald-300", "text-black");
         setTimeout(() => {
           btn.textContent = orig;
           btn.classList.remove("bg-emerald-300");
