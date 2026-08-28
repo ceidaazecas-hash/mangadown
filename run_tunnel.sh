@@ -27,7 +27,7 @@ fi
 
 # 3. Start MangaDrop backend in background
 echo "Starting MangaDrop Turbo Server on port $PORT..."
-./venv/bin/uvicorn backend.app:app --host 0.0.0.0 --port $PORT &
+./venv/bin/uvicorn backend.app:app --host 0.0.0.0 --port $PORT --reload &
 SERVER_PID=$!
 
 # Ensure cleanup on exit

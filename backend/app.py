@@ -631,6 +631,54 @@ class ConvertExistingRequest(BaseModel):
     file_id: str
     target_format: str = "azw3"
 
+class BundleZipRequest(BaseModel):
+    file_ids: List[str]
+    zip_name: Optional[str] = None
+
+@app.post("/api/convert/bundle-zip")
+async def bundle_files_into_zip(req: BundleZipRequest):
+    if not req.file_ids:
+        raise HTTPException(status_code=400, detail="No file IDs provided.")
+
+    zip_filename = req.zip_name or f"Converted_Manga_Bundle_{int(time.time())}.zip"
+    if not zip_filename.endswith(".zip"):
+        zip_filename += ".zip"
+
+    zip_path = os.path.join(DOWNLOADS_DIR, zip_filename)
+    import zipfile
+    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for fid in req.file_ids:
+            fp = download_manager.get_file_path(fid)
+            if fp and os.path.exists(fp):
+                zf.write(fp, arcname=os.path.basename(fp))
+
+    zip_id = str(uuid.uuid4())
+    download_manager.register_file(zip_id, zip_path)
+    zip_size = os.path.getsize(zip_path)
+    zip_size_fmt = format_file_size(zip_size)
+
+    zip_entry = {
+        "file_id": zip_id,
+        "manga_title": zip_filename,
+        "filename": zip_filename,
+        "format": "ZIP",
+        "bundle_mode": "batch_zip",
+        "chapter_range": f"{len(req.file_ids)} Converted Files",
+        "chapter_count": len(req.file_ids),
+        "file_size": zip_size_fmt,
+        "file_path": zip_path,
+        "download_url": f"/api/files/{zip_id}",
+        "timestamp": time.time()
+    }
+    download_manager.history.insert(0, zip_entry)
+
+    return {
+        "file_id": zip_id,
+        "filename": zip_filename,
+        "file_size": zip_size_fmt,
+        "download_url": f"/api/files/{zip_id}"
+    }
+
 @app.post("/api/convert/existing")
 async def convert_existing_file(req: ConvertExistingRequest):
     source_path = download_manager.get_file_path(req.file_id)

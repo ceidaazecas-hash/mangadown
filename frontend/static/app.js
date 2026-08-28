@@ -931,43 +931,65 @@ async function executeFileConversion() {
     return;
   }
 
-  const isBatch = converterSelectedFiles.length > 1;
   btn.disabled = true;
-  btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Converting ${isBatch ? `${converterSelectedFiles.length} files` : 'file'} to ${targetFormat.toUpperCase()}...</span>`;
   safeCreateIcons();
 
   statusBox.className = "p-3.5 rounded-2xl text-xs bg-purple-950/40 border border-purple-500/40 text-purple-200";
-  statusBox.innerHTML = `
-    <div class="flex items-center gap-2">
-      <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-purple-400"></i>
-      <span class="font-bold">Extracting pages and converting ${isBatch ? `${converterSelectedFiles.length} files in batch` : 'file'} to ${targetFormat.toUpperCase()}...</span>
-    </div>
-  `;
   statusBox.classList.remove("hidden");
-  safeCreateIcons();
 
   try {
-    let res;
-    if (isBatch) {
-      const formData = new FormData();
-      for (const f of converterSelectedFiles) {
-        formData.append("files", f);
+    const convertedItems = [];
+
+    if (converterSelectedFiles.length > 0) {
+      const totalFiles = converterSelectedFiles.length;
+
+      for (let i = 0; i < totalFiles; i++) {
+        const file = converterSelectedFiles[i];
+        const currentNum = i + 1;
+        const progressPct = Math.round(((i) / totalFiles) * 100);
+
+        btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Converting (${currentNum}/${totalFiles})...</span>`;
+        statusBox.innerHTML = `
+          <div class="space-y-2">
+            <div class="flex justify-between items-center text-xs font-bold text-purple-300">
+              <span class="truncate">Converting (${currentNum}/${totalFiles}): ${escapeHtml(file.name)}...</span>
+              <span class="font-mono">${progressPct}%</span>
+            </div>
+            <div class="w-full bg-dark-surface rounded-full h-2 overflow-hidden border border-purple-500/30">
+              <div class="bg-gradient-to-r from-purple-500 to-brand-accent h-full transition-all duration-300 rounded-full" style="width: ${progressPct}%"></div>
+            </div>
+          </div>
+        `;
+        safeCreateIcons();
+
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("target_format", targetFormat);
+
+        const res = await fetch("/api/convert/upload", {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.detail || `Conversion failed for ${file.name}.`);
+        }
+
+        convertedItems.push(data);
       }
-      formData.append("target_format", targetFormat);
-      res = await fetch("/api/convert/batch", {
-        method: "POST",
-        body: formData
-      });
-    } else if (converterSelectedFiles.length === 1) {
-      const formData = new FormData();
-      formData.append("file", converterSelectedFiles[0]);
-      formData.append("target_format", targetFormat);
-      res = await fetch("/api/convert/upload", {
-        method: "POST",
-        body: formData
-      });
-    } else {
-      res = await fetch("/api/convert/existing", {
+
+    } else if (converterSelectedFileId) {
+      btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Converting...</span>`;
+      statusBox.innerHTML = `
+        <div class="flex items-center gap-2">
+          <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-purple-400"></i>
+          <span class="font-bold">Converting file to ${targetFormat.toUpperCase()}...</span>
+        </div>
+      `;
+      safeCreateIcons();
+
+      const res = await fetch("/api/convert/existing", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -975,37 +997,57 @@ async function executeFileConversion() {
           target_format: targetFormat
         })
       });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || "Conversion failed.");
+      }
+      convertedItems.push(data);
     }
 
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.detail || "Conversion failed.");
-    }
+    // Done Converting!
+    if (convertedItems.length > 1) {
+      let zipBundle = null;
+      try {
+        const fileIds = convertedItems.map(c => c.file_id);
+        const zipRes = await fetch("/api/convert/bundle-zip", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            file_ids: fileIds,
+            zip_name: `Batch_Converted_${targetFormat.toUpperCase()}s_${Date.now()}.zip`
+          })
+        });
+        if (zipRes.ok) {
+          zipBundle = await zipRes.json();
+        }
+      } catch (e) {
+        console.error("ZIP bundle error:", e);
+      }
 
-    if (data.items && data.items.length > 1) {
       let html = `
         <div class="space-y-3">
           <div class="flex items-center gap-2 text-emerald-300 font-bold text-sm">
             <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
-            <span>Successfully Converted ${data.total_converted} Files to ${escapeHtml(data.target_format)}!</span>
+            <span>Successfully Converted All ${convertedItems.length} Files to ${targetFormat.toUpperCase()}!</span>
           </div>
       `;
 
-      if (data.zip_bundle) {
+      if (zipBundle) {
         html += `
           <a 
-            href="${data.zip_bundle.download_url}" 
-            download="${escapeHtml(data.zip_bundle.filename)}"
+            href="${zipBundle.download_url}" 
+            download="${escapeHtml(zipBundle.filename)}"
             class="w-full py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all shadow-md active:scale-95"
           >
             <i data-lucide="archive" class="w-4 h-4"></i>
-            <span>📦 Download All ${data.total_converted} Files as ZIP (${data.zip_bundle.file_size})</span>
+            <span>📦 Download All ${convertedItems.length} Files as ZIP (${zipBundle.file_size})</span>
           </a>
         `;
       }
 
       html += `<div class="max-h-48 overflow-y-auto space-y-1.5 pr-1">`;
-      for (const item of data.items) {
+      for (const item of convertedItems) {
         html += `
           <div class="p-2 rounded-xl bg-dark-surface border border-dark-border flex items-center justify-between gap-2 text-xs">
             <span class="truncate font-semibold text-white">${escapeHtml(item.filename)}</span>
@@ -1024,7 +1066,8 @@ async function executeFileConversion() {
       statusBox.className = "p-4 rounded-2xl text-xs space-y-3 bg-emerald-950/40 border border-emerald-500/40 text-emerald-200";
       statusBox.innerHTML = html;
 
-    } else {
+    } else if (convertedItems.length === 1) {
+      const data = convertedItems[0];
       statusBox.className = "p-4 rounded-2xl text-xs space-y-3 bg-emerald-950/40 border border-emerald-500/40 text-emerald-200";
       statusBox.innerHTML = `
         <div class="flex items-center gap-2 text-emerald-300 font-bold text-sm">
