@@ -725,18 +725,44 @@
         </div>
       </div>
 
-      <!-- TAB 2: SPLIT OPTIONS (SMART AUTO-SPLIT 200MB) -->
-      <div id="splitTabSection" class="hidden space-y-3">
-        <div class="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 flex items-start gap-3.5">
-          <div class="w-9 h-9 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
-            <i data-lucide="zap" class="w-5 h-5 text-indigo-400"></i>
+      <!-- TAB 2: SPLIT OPTIONS (SMART AUTO-SPLIT 20MB DEFAULT) -->
+      <div id="splitTabSection" class="hidden space-y-4">
+        <!-- Target Size Selector -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-bold text-slate-300 flex items-center justify-between">
+            <span class="flex items-center gap-1.5">
+              <i data-lucide="zap" class="w-3.5 h-3.5 text-indigo-400"></i>
+              <span>Target Volume Size:</span>
+            </span>
+            <span id="splitSizeLabel" class="text-[10px] text-indigo-400 font-mono">⚡ 20 MB (Fast Send)</span>
+          </label>
+          <div class="grid grid-cols-3 gap-2 bg-dark-surface p-1.5 rounded-2xl border border-dark-border">
+            <label class="cursor-pointer text-center">
+              <input type="radio" name="splitSizeOption" value="20" checked class="peer sr-only" onchange="updateSplitSizeUI()">
+              <div class="py-2.5 px-2 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:shadow-md transition-all">
+                ⚡ 20 MB <span class="text-[10px] opacity-75 block font-normal">Ultra-Fast</span>
+              </div>
+            </label>
+            <label class="cursor-pointer text-center">
+              <input type="radio" name="splitSizeOption" value="50" class="peer sr-only" onchange="updateSplitSizeUI()">
+              <div class="py-2.5 px-2 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:shadow-md transition-all">
+                📦 50 MB <span class="text-[10px] opacity-75 block font-normal">Balanced</span>
+              </div>
+            </label>
+            <label class="cursor-pointer text-center">
+              <input type="radio" name="splitSizeOption" value="200" class="peer sr-only" onchange="updateSplitSizeUI()">
+              <div class="py-2.5 px-2 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:shadow-md transition-all">
+                📚 200 MB <span class="text-[10px] opacity-75 block font-normal">Max Volume</span>
+              </div>
+            </label>
           </div>
-          <div class="space-y-1 text-xs text-left">
-            <p class="font-bold text-white text-sm">⚡ Send-to-Kindle Auto-Split (Strictly &lt; 200 MB)</p>
-            <p class="text-slate-300 leading-relaxed">
-              MangaDrop automatically partitions your manga so every volume is strictly under Amazon's <strong>200 MB limit</strong> for 100% error-free sending to Kindle!
-            </p>
-          </div>
+        </div>
+
+        <div class="p-3.5 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 flex items-start gap-3">
+          <i data-lucide="info" class="w-4 h-4 text-indigo-400 shrink-0 mt-0.5"></i>
+          <p class="text-[11px] text-slate-300 leading-relaxed">
+            <strong>20 MB volumes</strong> upload in 1–2 seconds and send instantly with Amazon Send to Kindle and Email!
+          </p>
         </div>
       </div>
 

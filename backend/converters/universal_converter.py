@@ -209,10 +209,10 @@ class UniversalConverter:
             raise ValueError("No images found to split.")
 
         if split_mode in ("auto", "auto_size") or (split_mode == "parts" and split_value == 0):
-            # Strict Send to Kindle & E-Reader 200 MB Hard Limit:
-            # Set threshold to 180 MB (188,743,680 bytes) so final output with container overhead
-            # is strictly ~180MB - 185MB and NEVER exceeds 200 MB!
-            target_max_bytes = 180 * 1024 * 1024
+            # Dynamic Target Size (default: 20 MB for lightning-fast Send-to-Kindle & Email)
+            target_mb = int(split_value) if (split_value and int(split_value) > 0) else 20
+            # Set a 90% safety threshold so packaging overhead never exceeds the target MB
+            target_max_bytes = int(target_mb * 0.90 * 1024 * 1024)
             
             volume_chunks = []
             curr_chunk = []

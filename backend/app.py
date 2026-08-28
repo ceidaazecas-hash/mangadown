@@ -637,15 +637,15 @@ class ConvertExistingRequest(BaseModel):
 class SplitConvertRequest(BaseModel):
     file_id: str
     target_format: str = "epub"
-    split_mode: str = "parts"
-    split_value: int = 3
+    split_mode: str = "auto_size"
+    split_value: int = 20
 
 @app.post("/api/split/upload")
 async def upload_and_split_file(
     file: UploadFile = File(...),
     target_format: Optional[str] = Form(None),
     split_mode: str = Form("auto_size"),
-    split_value: int = Form(200)
+    split_value: int = Form(20)
 ):
     orig_name = file.filename or "manga"
     ext = os.path.splitext(orig_name)[1].lower().lstrip(".")
