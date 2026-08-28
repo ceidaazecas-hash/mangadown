@@ -100,8 +100,11 @@ class KindleService:
 
         os.makedirs(output_dir, exist_ok=True)
         base_name = os.path.basename(file_path)
-        clean_title = base_name.split("_", 1)[1] if ("_" in base_name and len(base_name.split("_")[0]) == 36) else base_name
-        clean_title = re.sub(r'\.epub$', '', clean_title, flags=re.IGNORECASE)
+        clean_title = re.sub(r'^[a-f0-9\-]{36}_', '', base_name)
+        clean_title = re.sub(r'_(?:Part|Vol|Volume)[_\s\-]?\d+(?:_of_\d+)?', '', clean_title, flags=re.IGNORECASE)
+        clean_title = re.sub(r'\.(?:epub|pdf|cbz|zip)$', '', clean_title, flags=re.IGNORECASE)
+        clean_title = clean_title.replace("_", " ").strip()
+        clean_title = re.sub(r'\s+', ' ', clean_title)
 
         # 1. Extract image files
         extracted_images: List[Tuple[str, bytes]] = []
@@ -176,17 +179,21 @@ class KindleService:
             vol_images = [opt[0] for opt in optimized_results[start_i:end_i]]
 
             vol_id = str(uuid.uuid4())
-            vol_filename = f"{clean_title}_Part_{vol_idx+1}_of_{num_volumes}.epub"
-            vol_path = os.path.join(output_dir, f"{vol_id}_{vol_filename}")
+            if num_volumes > 1:
+                vol_filename = f"{clean_title} - Vol {vol_idx+1:02d} of {num_volumes:02d}.epub"
+            else:
+                vol_filename = f"{clean_title} (Kindle).epub"
+
+            vol_path = os.path.join(output_dir, vol_filename)
 
             ch_data = [{
-                "title": f"Part {vol_idx+1} (Pages {start_i+1}-{end_i})",
-                "chapter_display": f"Part {vol_idx+1}",
+                "title": f"Vol {vol_idx+1} (Pages {start_i+1}-{end_i})",
+                "chapter_display": f"Vol {vol_idx+1}",
                 "images": vol_images
             }]
 
             EPUBBuilder.build_epub(
-                manga_title=f"{clean_title} (Part {vol_idx+1}/{num_volumes})",
+                manga_title=f"{clean_title} (Vol {vol_idx+1}/{num_volumes})",
                 chapters_data=ch_data,
                 output_path=vol_path,
                 kindle_optimize=False

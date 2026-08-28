@@ -40,6 +40,24 @@ class DownloadManager:
         self.tracker = ProgressTracker()
         os.makedirs(self.download_dir, exist_ok=True)
         self.history: List[Dict[str, Any]] = []
+        self.file_registry: Dict[str, str] = {}
+
+    def register_file(self, file_id: str, file_path: str):
+        self.file_registry[file_id] = file_path
+
+    def get_file_path(self, file_id: str) -> Optional[str]:
+        if file_id in self.file_registry and os.path.exists(self.file_registry[file_id]):
+            return self.file_registry[file_id]
+        for item in self.history:
+            if item.get("file_id") == file_id and os.path.exists(item.get("file_path", "")):
+                return item["file_path"]
+        if os.path.exists(self.download_dir):
+            for fname in os.listdir(self.download_dir):
+                if fname.startswith(f"{file_id}_"):
+                    return os.path.join(self.download_dir, fname)
+                if fname == file_id or os.path.splitext(fname)[0] == file_id:
+                    return os.path.join(self.download_dir, fname)
+        return None
 
     async def _download_single_page(
         self,
@@ -218,17 +236,19 @@ class DownloadManager:
             )
 
             safe_manga_title = sanitize_filename(manga.title)
-            ch_start = selected_chapters[0].chapter_display.replace(" ", "_")
-            ch_end = selected_chapters[-1].chapter_display.replace(" ", "_")
+            ch_start = selected_chapters[0].chapter_display
+            ch_end = selected_chapters[-1].chapter_display
             range_str = f"{ch_start}" if len(selected_chapters) == 1 else f"{ch_start}-{ch_end}"
+            range_str = sanitize_filename(range_str)
             
             file_id = str(uuid.uuid4())
 
             loop = asyncio.get_running_loop()
             with ThreadPoolExecutor(max_workers=max(4, os.cpu_count() or 4)) as pool:
                 if bundle_mode == "single":
-                    out_filename = f"{safe_manga_title}_{range_str}.{export_format}"
-                    final_output_path = os.path.join(self.download_dir, f"{file_id}_{out_filename}")
+                    out_filename = f"{safe_manga_title} ({range_str}).{export_format}"
+                    final_output_path = os.path.join(self.download_dir, out_filename)
+                    self.register_file(file_id, final_output_path)
 
                     builder_data = [
                         {
@@ -256,8 +276,9 @@ class DownloadManager:
                         )
 
                 else:
-                    out_filename = f"{safe_manga_title}_{range_str}_{export_format.upper()}s.zip"
-                    final_output_path = os.path.join(self.download_dir, f"{file_id}_{out_filename}")
+                    out_filename = f"{safe_manga_title} ({range_str}) - {export_format.upper()}s.zip"
+                    final_output_path = os.path.join(self.download_dir, out_filename)
+                    self.register_file(file_id, final_output_path)
                     
                     zip_temp_dir = os.path.join(task_temp_dir, "individual_files")
                     os.makedirs(zip_temp_dir, exist_ok=True)

@@ -212,34 +212,34 @@ async def cancel_task(task_id: str):
 
 @app.get("/api/files/{file_id}")
 async def download_file(file_id: str):
-    # Find matching file in downloads directory
-    for fname in os.listdir(DOWNLOADS_DIR):
-        if fname.startswith(f"{file_id}_"):
-            full_path = os.path.join(DOWNLOADS_DIR, fname)
-            original_filename = fname.split(f"{file_id}_", 1)[-1]
-            
-            # Determine correct MIME type
-            ext = os.path.splitext(original_filename)[-1].lower()
-            if ext == ".epub":
-                media_type = "application/epub+zip"
-            elif ext == ".pdf":
-                media_type = "application/pdf"
-            elif ext == ".cbz":
-                media_type = "application/vnd.comicbook+zip"
-            elif ext == ".zip":
-                media_type = "application/zip"
-            else:
-                media_type = "application/octet-stream"
+    full_path = download_manager.get_file_path(file_id)
+    if not full_path or not os.path.exists(full_path):
+        raise HTTPException(status_code=404, detail="File not found or expired.")
 
-            return FileResponse(
-                full_path,
-                filename=original_filename,
-                media_type=media_type,
-                headers={
-                    "Content-Disposition": f'attachment; filename="{original_filename}"'
-                }
-            )
-    raise HTTPException(status_code=404, detail="File not found or expired.")
+    original_filename = os.path.basename(full_path)
+    if "_" in original_filename and len(original_filename.split("_")[0]) == 36:
+        original_filename = original_filename.split("_", 1)[1]
+
+    ext = os.path.splitext(original_filename)[-1].lower()
+    if ext == ".epub":
+        media_type = "application/epub+zip"
+    elif ext == ".pdf":
+        media_type = "application/pdf"
+    elif ext == ".cbz":
+        media_type = "application/vnd.comicbook+zip"
+    elif ext == ".zip":
+        media_type = "application/zip"
+    else:
+        media_type = "application/octet-stream"
+
+    return FileResponse(
+        full_path,
+        filename=original_filename,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{original_filename}"'
+        }
+    )
 
 class KindleSendRequest(BaseModel):
     file_id: str
@@ -252,12 +252,7 @@ class KindleSendRequest(BaseModel):
 
 @app.post("/api/kindle/send")
 async def send_to_kindle(req: KindleSendRequest):
-    target_path = None
-    for fname in os.listdir(DOWNLOADS_DIR):
-        if fname.startswith(f"{req.file_id}_"):
-            target_path = os.path.join(DOWNLOADS_DIR, fname)
-            break
-
+    target_path = download_manager.get_file_path(req.file_id)
     if not target_path or not os.path.exists(target_path):
         raise HTTPException(status_code=404, detail="File not found or expired.")
 
@@ -280,12 +275,7 @@ class KindleSplitRequest(BaseModel):
 
 @app.post("/api/kindle/split")
 async def split_for_kindle(req: KindleSplitRequest):
-    target_path = None
-    for fname in os.listdir(DOWNLOADS_DIR):
-        if fname.startswith(f"{req.file_id}_"):
-            target_path = os.path.join(DOWNLOADS_DIR, fname)
-            break
-
+    target_path = download_manager.get_file_path(req.file_id)
     if not target_path or not os.path.exists(target_path):
         raise HTTPException(status_code=404, detail="File not found or expired.")
 
@@ -299,6 +289,7 @@ async def split_for_kindle(req: KindleSplitRequest):
         )
 
         for vol in volumes:
+            download_manager.register_file(vol["file_id"], vol["file_path"])
             download_manager.history.insert(0, {
                 "file_id": vol["file_id"],
                 "manga_title": vol["filename"],
@@ -319,12 +310,7 @@ async def split_for_kindle(req: KindleSplitRequest):
 
 @app.post("/api/kindle/split/start")
 async def start_kindle_split(req: KindleSplitRequest, background_tasks: BackgroundTasks):
-    target_path = None
-    for fname in os.listdir(DOWNLOADS_DIR):
-        if fname.startswith(f"{req.file_id}_"):
-            target_path = os.path.join(DOWNLOADS_DIR, fname)
-            break
-
+    target_path = download_manager.get_file_path(req.file_id)
     if not target_path or not os.path.exists(target_path):
         raise HTTPException(status_code=404, detail="File not found or expired.")
 
@@ -347,6 +333,7 @@ async def start_kindle_split(req: KindleSplitRequest, background_tasks: Backgrou
             )
 
             for vol in volumes:
+                download_manager.register_file(vol["file_id"], vol["file_path"])
                 download_manager.history.insert(0, {
                     "file_id": vol["file_id"],
                     "manga_title": vol["filename"],
