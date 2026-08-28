@@ -8,7 +8,7 @@ from typing import List, Optional, Dict, Any
 from dataclasses import asdict
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Query, UploadFile, File
-from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse
+from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -53,6 +53,10 @@ except Exception:
 
 # Mount static files
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return Response(status_code=204)
 
 tracker = ProgressTracker()
 download_manager = DownloadManager(download_dir=DOWNLOADS_DIR)
