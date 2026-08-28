@@ -640,11 +640,100 @@ class SplitConvertRequest(BaseModel):
     split_mode: str = "parts"
     split_value: int = 3
 
+@app.post("/api/split/upload")
+async def upload_and_split_file(
+    file: UploadFile = File(...),
+    target_format: Optional[str] = Form(None),
+    split_mode: str = Form("auto_size"),
+    split_value: int = Form(200)
+):
+    orig_name = file.filename or "manga"
+    ext = os.path.splitext(orig_name)[1].lower().lstrip(".")
+    target_fmt = target_format or ext
+    if not target_fmt or target_fmt.lower() in ("auto", "same", "default"):
+        target_fmt = ext if ext in ("azw3", "mobi", "epub", "pdf", "cbz", "azw") else "epub"
+    if target_fmt == "azw":
+        target_fmt = "azw3"
+
+    clean_title = sanitize_filename(os.path.splitext(orig_name)[0])
+    temp_dir = "/tmp/manga_temp_uploads"
+    os.makedirs(temp_dir, exist_ok=True)
+    temp_path = os.path.join(temp_dir, f"{uuid.uuid4().hex}_{orig_name}")
+
+    try:
+        async with aiofiles.open(temp_path, "wb") as f_out:
+            while chunk := await file.read(1024 * 1024):
+                await f_out.write(chunk)
+
+        loop = asyncio.get_running_loop()
+        created_paths = await loop.run_in_executor(
+            None,
+            UniversalConverter.split_and_convert,
+            temp_path,
+            target_fmt,
+            DOWNLOADS_DIR,
+            split_mode,
+            split_value,
+            clean_title
+        )
+
+        results = []
+        for p in created_paths:
+            fid = str(uuid.uuid4())
+            download_manager.register_file(fid, p)
+            fname = os.path.basename(p)
+            fsize = os.path.getsize(p)
+            size_fmt = format_file_size(fsize)
+
+            history_entry = {
+                "file_id": fid,
+                "manga_title": fname,
+                "filename": fname,
+                "format": target_fmt.upper(),
+                "bundle_mode": "split_volume",
+                "chapter_range": "Split Volume",
+                "chapter_count": 1,
+                "file_size": size_fmt,
+                "file_path": p,
+                "download_url": f"/api/files/{fid}",
+                "timestamp": time.time()
+            }
+            download_manager.history.insert(0, history_entry)
+            results.append({
+                "file_id": fid,
+                "filename": fname,
+                "file_size": size_fmt,
+                "download_url": f"/api/files/{fid}"
+            })
+
+        return {
+            "success": True,
+            "total_parts": len(results),
+            "target_format": target_fmt.upper(),
+            "items": results
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Split error: {str(e)}")
+    finally:
+        try:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+        except Exception:
+            pass
+
 @app.post("/api/convert/split")
 async def split_and_convert_file(req: SplitConvertRequest):
     source_path = download_manager.get_file_path(req.file_id)
     if not source_path or not os.path.exists(source_path):
         raise HTTPException(status_code=404, detail="Source file not found or expired.")
+
+    # Strictly preserve the source file format if not specified or set to auto
+    target_fmt = req.target_format
+    if not target_fmt or target_fmt.lower() in ("auto", "same", "default"):
+        ext = os.path.splitext(source_path)[1].lower().lstrip(".")
+        target_fmt = ext if ext in ("azw3", "mobi", "epub", "pdf", "cbz", "azw") else "epub"
+        if target_fmt == "azw":
+            target_fmt = "azw3"
 
     try:
         loop = asyncio.get_running_loop()
@@ -652,7 +741,7 @@ async def split_and_convert_file(req: SplitConvertRequest):
             None,
             UniversalConverter.split_and_convert,
             source_path,
-            req.target_format,
+            target_fmt,
             DOWNLOADS_DIR,
             req.split_mode,
             req.split_value

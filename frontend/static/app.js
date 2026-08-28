@@ -1016,37 +1016,35 @@ async function executeFileSplitting() {
   safeCreateIcons();
 
   try {
-    let sourceFileId = converterSelectedFileId;
+    let data;
 
-    if (!sourceFileId && converterSelectedFiles.length > 0) {
+    if (converterSelectedFiles.length > 0) {
       const file = converterSelectedFiles[0];
       const formData = new FormData();
       formData.append("file", file);
       formData.append("target_format", targetFormat);
+      formData.append("split_mode", splitMode);
+      formData.append("split_value", splitValue);
 
-      const upRes = await fetch("/api/convert/upload", {
+      const res = await fetch("/api/split/upload", {
         method: "POST",
         body: formData
       });
-      const upData = await upRes.json();
-      if (!upRes.ok) throw new Error(upData.detail || "File upload failed.");
-      sourceFileId = upData.file_id;
-    }
-
-    const res = await fetch("/api/convert/split", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        file_id: sourceFileId,
-        target_format: targetFormat,
-        split_mode: splitMode,
-        split_value: splitValue
-      })
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.detail || "Splitting failed.");
+      data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Splitting failed.");
+    } else if (converterSelectedFileId) {
+      const res = await fetch("/api/convert/split", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          file_id: converterSelectedFileId,
+          target_format: targetFormat,
+          split_mode: splitMode,
+          split_value: splitValue
+        })
+      });
+      data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Splitting failed.");
     }
 
     const items = data.items || [];
