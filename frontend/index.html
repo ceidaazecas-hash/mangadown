@@ -306,25 +306,39 @@
           </div>
 
           <!-- Format Selector Pills -->
-          <div class="flex items-center gap-2 bg-dark-card p-1.5 rounded-2xl border border-dark-border">
+          <div class="flex flex-wrap items-center gap-1.5 bg-dark-card p-1.5 rounded-2xl border border-dark-border">
             <span class="text-xs font-semibold px-2 text-slate-400">Format:</span>
             <label class="cursor-pointer">
               <input type="radio" name="exportFormat" value="pdf" checked class="peer sr-only" onchange="updateFormatUI()">
-              <div class="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-brand-600 peer-checked:text-white peer-checked:shadow-md transition-all flex items-center gap-1.5">
+              <div class="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-brand-600 peer-checked:text-white peer-checked:shadow-md transition-all flex items-center gap-1">
                 <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
                 <span>PDF</span>
               </div>
             </label>
             <label class="cursor-pointer">
               <input type="radio" name="exportFormat" value="epub" class="peer sr-only" onchange="updateFormatUI()">
-              <div class="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-brand-600 peer-checked:text-white peer-checked:shadow-md transition-all flex items-center gap-1.5">
+              <div class="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-brand-600 peer-checked:text-white peer-checked:shadow-md transition-all flex items-center gap-1">
                 <i data-lucide="book" class="w-3.5 h-3.5"></i>
                 <span>EPUB</span>
               </div>
             </label>
             <label class="cursor-pointer">
+              <input type="radio" name="exportFormat" value="mobi" class="peer sr-only" onchange="updateFormatUI()">
+              <div class="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-amber-600 peer-checked:text-white peer-checked:shadow-md transition-all flex items-center gap-1">
+                <i data-lucide="tablet" class="w-3.5 h-3.5"></i>
+                <span>MOBI</span>
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="exportFormat" value="azw3" class="peer sr-only" onchange="updateFormatUI()">
+              <div class="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-amber-600 peer-checked:text-white peer-checked:shadow-md transition-all flex items-center gap-1">
+                <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
+                <span>AZW3</span>
+              </div>
+            </label>
+            <label class="cursor-pointer">
               <input type="radio" name="exportFormat" value="cbz" class="peer sr-only" onchange="updateFormatUI()">
-              <div class="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-brand-600 peer-checked:text-white peer-checked:shadow-md transition-all flex items-center gap-1.5">
+              <div class="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-brand-600 peer-checked:text-white peer-checked:shadow-md transition-all flex items-center gap-1">
                 <i data-lucide="archive" class="w-3.5 h-3.5"></i>
                 <span>CBZ</span>
               </div>

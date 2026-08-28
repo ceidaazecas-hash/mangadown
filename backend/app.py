@@ -278,6 +278,10 @@ async def download_file(file_id: str):
         media_type = "application/epub+zip"
     elif ext == ".pdf":
         media_type = "application/pdf"
+    elif ext in (".mobi", ".prc"):
+        media_type = "application/x-mobipocket-ebook"
+    elif ext in (".azw3", ".azw"):
+        media_type = "application/vnd.amazon.ebook"
     elif ext == ".cbz":
         media_type = "application/vnd.comicbook+zip"
     elif ext == ".zip":

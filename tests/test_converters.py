@@ -111,3 +111,28 @@ def test_cbz_builder(tmp_path):
         names = z.namelist()
         assert "ComicInfo.xml" in names
         assert "page_0001.jpg" in names
+
+def test_mobi_builder(tmp_path):
+    from backend.converters.mobi_builder import MOBIBuilder
+    img1 = create_dummy_image(800, 1200, "cyan")
+    chapters_data = [
+        {
+            "title": "Chapter 1",
+            "chapter_display": "Ch. 1",
+            "images": [img1]
+        }
+    ]
+
+    out_mobi = str(tmp_path / "test_manga.mobi")
+    res_path = MOBIBuilder.build_mobi(
+        manga_title="Test MOBI Manga",
+        chapters_data=chapters_data,
+        output_path=out_mobi,
+        author="Kindle Author"
+    )
+
+    assert os.path.exists(res_path)
+    assert os.path.getsize(res_path) > 1000
+    with open(res_path, "rb") as f:
+        header = f.read(68)
+        assert b"BOOKMOBI" in header
