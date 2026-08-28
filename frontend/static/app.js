@@ -1253,73 +1253,32 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// Kindle Wi-Fi Wireless Hub
-let cachedHubUrl = "";
-
-async function openKindleHubModal() {
-  const modal = document.getElementById("kindleHubModal");
-  const kindleModal = document.getElementById("kindleModal");
-  if (kindleModal) kindleModal.classList.add("hidden");
-
+// OpenMTP Kindle Transfer Modal
+function openOpenMTPModal() {
+  const modal = document.getElementById("openMtpModal");
   if (modal) {
     modal.classList.remove("hidden");
     safeCreateIcons();
   }
-
-  const publicUrlText = document.getElementById("kindleHubPublicUrlText");
-  const localUrlText = document.getElementById("kindleHubLocalUrlText");
-  const urlMini = document.getElementById("kindleHubUrlMini");
-  const previewBtn = document.getElementById("previewKindleHubBtn");
-
-  const currentOrigin = window.location.origin;
-  const publicHubUrl = `${currentOrigin}/k`;
-  let localHubUrl = `http://127.0.0.1:8000/kindle`;
-
-  if (publicUrlText) publicUrlText.textContent = publicHubUrl;
-  if (urlMini) urlMini.textContent = publicHubUrl;
-  if (previewBtn) previewBtn.href = publicHubUrl;
-
-  try {
-    const res = await fetch("/api/network/ip");
-    if (res.ok) {
-      const data = await res.json();
-      const shortUrl = data.short_k || data.public_k || `${currentOrigin}/k`;
-      localHubUrl = data.hub_url || `http://${data.local_ip}:8000/kindle`;
-      if (publicUrlText) publicUrlText.textContent = shortUrl;
-      if (urlMini) urlMini.textContent = shortUrl;
-      if (localUrlText) localUrlText.textContent = localHubUrl;
-    }
-  } catch (e) {
-    console.error("Network IP lookup error:", e);
-  }
 }
 
-function closeKindleHubModal() {
-  const modal = document.getElementById("kindleHubModal");
+function closeOpenMTPModal() {
+  const modal = document.getElementById("openMtpModal");
   if (modal) modal.classList.add("hidden");
 }
 
-function copyPublicKindleUrl() {
-  const text = document.getElementById("kindleHubPublicUrlText")?.textContent || "";
-  copyTextWithFeedback(text, "copyPublicUrlBtn");
-}
-
-function copyLocalKindleUrl() {
-  const text = document.getElementById("kindleHubLocalUrlText")?.textContent || "";
-  copyTextWithFeedback(text, "copyLocalUrlBtn");
-}
-
-function copyTextWithFeedback(text, btnId) {
-  if (text) {
-    navigator.clipboard.writeText(text).then(() => {
-      const btn = document.getElementById(btnId);
+function copyDownloadsPath() {
+  const path = "~/Desktop/manga/downloads";
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(path).then(() => {
+      const btn = document.getElementById("copyPathBtn");
       if (btn) {
         const orig = btn.textContent;
         btn.textContent = "Copied! ✓";
-        btn.classList.add("bg-emerald-300", "text-black");
+        btn.classList.add("bg-amber-300", "text-black");
         setTimeout(() => {
           btn.textContent = orig;
-          btn.classList.remove("bg-emerald-300");
+          btn.classList.remove("bg-amber-300", "text-black");
         }, 2000);
       }
     });

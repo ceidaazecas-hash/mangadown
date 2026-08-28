@@ -86,14 +86,9 @@
       </div>
 
       <div class="flex items-center gap-2 sm:gap-3">
-        <button onclick="openKindleHubModal()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-xs sm:text-sm font-bold text-emerald-300 transition-all shadow-sm">
-          <i data-lucide="wifi" class="w-4 h-4 text-emerald-400"></i>
-          <span>Kindle Wi-Fi Hub</span>
-        </button>
-
-        <button onclick="triggerKindleUploadPicker()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-xs sm:text-sm font-bold text-amber-300 transition-all shadow-sm">
-          <i data-lucide="tablet" class="w-4 h-4 text-amber-400"></i>
-          <span>Send to Kindle</span>
+        <button onclick="openOpenMTPModal()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-xs sm:text-sm font-bold text-amber-300 transition-all shadow-sm">
+          <i data-lucide="usb" class="w-4 h-4 text-amber-400"></i>
+          <span>Kindle (OpenMTP)</span>
         </button>
 
         <button id="historyToggleBtn" onclick="toggleHistoryDrawer()" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-dark-surface hover:bg-dark-card border border-dark-border/80 text-sm font-medium text-slate-300 hover:text-white transition-all shadow-sm">
@@ -617,229 +612,77 @@
     </div>
   </div>
 
-  <!-- Dedicated Send to Kindle Modal -->
-  <div id="kindleModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+  <!-- Dedicated Kindle OpenMTP Transfer Modal -->
+  <div id="openMtpModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
     <div class="max-w-lg w-full rounded-3xl bg-dark-card border border-dark-border p-6 sm:p-8 space-y-6 shadow-2xl relative overflow-hidden animate-scale-up text-left">
       
+      <!-- Top header -->
       <!-- Top header -->
       <div class="flex items-center justify-between pb-3 border-b border-dark-border">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
-            <i data-lucide="tablet" class="w-5 h-5"></i>
+            <i data-lucide="usb" class="w-5 h-5"></i>
           </div>
           <div>
-            <h3 class="font-bold font-heading text-white text-lg">Send Manga to Kindle</h3>
-            <p class="text-xs text-slate-400">Lightweight, high-contrast e-ink optimized EPUB</p>
+            <h3 class="font-bold font-heading text-white text-lg">Transfer to Kindle via OpenMTP</h3>
+            <p class="text-xs text-slate-400">Fast, 100% reliable USB transfer for any file size</p>
           </div>
         </div>
-        <button onclick="closeKindleModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-dark-surface">
+        <button onclick="closeOpenMTPModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-dark-surface">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
 
-      <!-- File info badge -->
-      <div class="p-3.5 rounded-2xl bg-dark-surface border border-dark-border space-y-1">
-        <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Target Manga File</p>
-        <p id="kindleModalFilename" class="text-sm font-bold text-white truncate">manga_title.epub</p>
-      </div>
-
-      <!-- Kindle Email Field -->
-      <div class="space-y-2">
-        <label class="text-xs font-semibold text-slate-300 flex items-center justify-between">
-          <span>Your Kindle Email Address</span>
-          <span class="text-[10px] text-amber-400 font-mono">@kindle.com</span>
-        </label>
-        <div class="flex items-center rounded-xl bg-dark-surface border border-dark-border px-3.5 py-2.5 focus-within:border-amber-500 focus-within:ring-2 focus-within:ring-amber-500/20">
-          <i data-lucide="mail" class="w-4 h-4 text-slate-400 mr-2 shrink-0"></i>
-          <input 
-            type="email" 
-            id="kindleEmailInput" 
-            value="nit.ratha01_t9Ucaw@kindle.com" 
-            placeholder="your_name@kindle.com"
-            class="w-full bg-transparent text-sm text-white focus:outline-none font-mono" 
-          />
-        </div>
-      </div>
-
-      <!-- Kindle Transfer Options -->
-      <div class="space-y-3">
-        <!-- Option 1: Direct Kindle Hub (Wireless over Wi-Fi) -->
-        <button 
-          type="button"
-          onclick="openKindleHubModal()"
-          class="w-full p-3.5 rounded-2xl bg-gradient-to-r from-emerald-600/20 to-teal-500/20 border-2 border-emerald-500/50 hover:border-emerald-400 flex items-center justify-between group transition-all text-left shadow-lg"
-        >
-          <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
-              <i data-lucide="wifi" class="w-4 h-4"></i>
-            </div>
-            <div>
-              <p class="text-xs font-extrabold text-white group-hover:text-emerald-300 transition-colors">Option 1: Download Wirelessly on Kindle (Hub)</p>
-              <p class="text-[11px] text-emerald-400/90 font-medium">Open your Kindle browser &rarr; tap Download directly to device!</p>
-            </div>
-          </div>
-          <i data-lucide="chevron-right" class="w-4 h-4 text-emerald-400 group-hover:translate-x-1 transition-transform"></i>
-        </button>
-
-        <!-- Option 2: Official Amazon Web (Instant Drag & Drop up to 200MB) -->
-        <a 
-          id="amazonSendWebBtn" 
-          href="https://www.amazon.com/sendtokindle" 
-          target="_blank" 
-          rel="noreferrer"
-          class="w-full p-3.5 rounded-2xl bg-gradient-to-r from-amber-600/20 to-brand-500/20 border border-amber-500/30 hover:border-amber-500/60 flex items-center justify-between group transition-all"
-        >
-          <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform">
-              <i data-lucide="external-link" class="w-4 h-4"></i>
-            </div>
-            <div>
-              <p class="text-xs font-bold text-white group-hover:text-amber-300 transition-colors">Option 2: Amazon Send to Kindle (Web)</p>
-              <p class="text-[11px] text-slate-400">Instant upload up to 200MB with automatic Wi-Fi cloud sync</p>
-            </div>
-          </div>
-          <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 group-hover:text-white transition-colors"></i>
-        </a>
-
-        <!-- Method 2: Direct Email Dispatch -->
-        <button 
-          type="button" 
-          onclick="sendKindleEmailDirect()" 
-          id="sendKindleDirectBtn"
-          class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
-        >
-          <i data-lucide="send" class="w-4 h-4"></i>
-          <span>Send Directly to <span id="btnKindleEmailLabel" class="font-mono">nit.ratha01_t9Ucaw@kindle.com</span></span>
-        </button>
-
-        <!-- Method 3: Auto-Split Large Files into <45MB Kindle Volumes -->
-        <button 
-          type="button" 
-          onclick="splitFileForKindle()" 
-          id="splitKindleBtn"
-          class="w-full py-3 px-4 rounded-xl bg-dark-surface hover:bg-dark-border border border-amber-500/40 text-amber-300 hover:text-amber-200 font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-95"
-        >
-          <i data-lucide="scissors" class="w-4 h-4 text-amber-400"></i>
-          <span>⚡ Auto-Split & Compress into Kindle Volumes (<45MB)</span>
-        </button>
-      </div>
-
-      <!-- Notification message box -->
-      <div id="kindleStatusBox" class="hidden p-3 rounded-xl text-xs space-y-1">
-        <!-- Populated dynamically -->
-      </div>
-
-      <!-- Quick Amazon Tip Alert -->
-      <div class="p-3 rounded-xl bg-slate-900/60 border border-dark-border text-[11px] text-slate-400 flex items-start gap-2">
-        <i data-lucide="info" class="w-4 h-4 text-brand-400 shrink-0 mt-0.5"></i>
-        <span>
-          <strong>Amazon Tip:</strong> Make sure your personal email is added under your Amazon account's <em>"Approved Personal Document E-mail List"</em> at Amazon Manage Your Content and Devices.
-        </span>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- Dedicated Kindle Wireless Local Wi-Fi Hub Modal (Closes ONLY on X button) -->
-  <div id="kindleHubModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-    <div class="max-w-lg w-full rounded-3xl bg-dark-card border border-emerald-500/40 p-6 sm:p-8 space-y-6 shadow-2xl relative overflow-hidden animate-scale-up text-left">
-      
-      <!-- Top header -->
-      <div class="flex items-center justify-between pb-3 border-b border-dark-border">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-            <i data-lucide="wifi" class="w-5 h-5"></i>
-          </div>
+      <!-- 3-Step Simple OpenMTP Guide -->
+      <div class="space-y-3 p-4 rounded-2xl bg-dark-surface border border-dark-border text-xs text-slate-300">
+        <div class="flex items-start gap-3">
+          <div class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-300 font-bold flex items-center justify-center text-xs shrink-0 mt-0.5">1</div>
           <div>
-            <h3 class="font-bold font-heading text-white text-lg flex items-center gap-2">
-              <span>Kindle Wireless Wi-Fi Hub</span>
-              <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-extrabold border border-emerald-500/30">Local High-Speed</span>
-            </h3>
-            <p class="text-xs text-slate-400">Send unlimited whole files over your home Wi-Fi</p>
-          </div>
-        </div>
-        <button onclick="closeKindleHubModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-dark-surface">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-
-      <!-- URL Display Boxes -->
-      <div class="space-y-3">
-        <!-- Public Internet Link (Easiest) -->
-        <div class="space-y-1.5">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
-              <i data-lucide="globe" class="w-3.5 h-3.5 text-emerald-400"></i>
-              <span>Best for Kindle Browser (HTTPS Link):</span>
-            </span>
-            <span class="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-extrabold">Recommended</span>
-          </div>
-          <div class="flex items-center justify-between gap-2 p-2.5 rounded-2xl bg-dark-surface border-2 border-emerald-500/40">
-            <span id="kindleHubPublicUrlText" class="font-mono text-xs sm:text-sm font-extrabold text-emerald-300 truncate">https://.../k</span>
-            <button 
-              onclick="copyPublicKindleUrl()" 
-              id="copyPublicUrlBtn"
-              class="px-3 py-1 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs shrink-0 active:scale-95 transition-all"
-            >
-              Copy
-            </button>
+            <p class="font-bold text-white text-sm">Plug Kindle into your Mac</p>
+            <p class="text-slate-400 mt-0.5">Connect your Kindle with a USB cable. (If Kindle asks "Allow device to access storage", tap <strong>Allow</strong>).</p>
           </div>
         </div>
 
-        <!-- Local Home Wi-Fi Link -->
-        <div class="space-y-1.5">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-              <i data-lucide="wifi" class="w-3.5 h-3.5 text-slate-400"></i>
-              <span>Local Home Wi-Fi Link (HTTP only):</span>
-            </span>
-            <span class="text-[10px] text-amber-400 font-mono">No https://</span>
+        <div class="flex items-start gap-3 pt-2 border-t border-dark-border/60">
+          <div class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-300 font-bold flex items-center justify-center text-xs shrink-0 mt-0.5">2</div>
+          <div>
+            <p class="font-bold text-white text-sm">Open OpenMTP on Mac</p>
+            <p class="text-slate-400 mt-0.5">Launch <strong>OpenMTP</strong> &mdash; your Kindle will appear on the right side under <strong>Root</strong>.</p>
           </div>
-          <div class="flex items-center justify-between gap-2 p-2.5 rounded-2xl bg-dark-surface border border-dark-border">
-            <span id="kindleHubLocalUrlText" class="font-mono text-xs sm:text-sm font-semibold text-slate-300 truncate">http://172.20.1.160:8000/kindle</span>
-            <button 
-              onclick="copyLocalKindleUrl()" 
-              id="copyLocalUrlBtn"
-              class="px-3 py-1 rounded-xl bg-dark-card hover:bg-dark-border text-slate-200 font-bold text-xs shrink-0 border border-dark-border active:scale-95 transition-all"
-            >
-              Copy
-            </button>
+        </div>
+
+        <div class="flex items-start gap-3 pt-2 border-t border-dark-border/60">
+          <div class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-300 font-bold flex items-center justify-center text-xs shrink-0 mt-0.5">3</div>
+          <div>
+            <p class="font-bold text-white text-sm">Drag & Drop into "documents" folder</p>
+            <p class="text-slate-400 mt-0.5">Drag your downloaded <strong class="text-amber-300">.azw3</strong>, <strong class="text-amber-300">.mobi</strong>, or <strong class="text-amber-300">.pdf</strong> file straight into the Kindle's <strong class="text-emerald-300">documents</strong> folder!</p>
           </div>
         </div>
       </div>
 
-      <!-- 3-Step Simple Guide -->
-      <div class="space-y-2.5 p-4 rounded-2xl bg-dark-surface/60 border border-dark-border text-xs text-slate-300">
-        <p class="font-bold text-white text-sm flex items-center gap-1.5">
-          <i data-lucide="sparkles" class="w-4 h-4 text-emerald-400"></i>
-          <span>How to open on your Kindle:</span>
-        </p>
-        <ol class="space-y-2 pl-4 list-decimal marker:text-emerald-400 marker:font-bold">
-          <li>On your Kindle, tap top-right menu (<strong>⋮</strong>) &rarr; tap <strong>Web Browser</strong>.</li>
-          <li>Type the <strong>HTTPS Link</strong> above (e.g. <strong id="kindleHubUrlMini" class="text-emerald-300 font-mono">https://.../k</strong>).</li>
-          <li>Tap <strong>"Download to Kindle"</strong> on any manga &mdash; the entire book downloads straight into your Kindle storage!</li>
-        </ol>
-      </div>
-
-      <!-- Quick Action Buttons -->
-      <div class="flex items-center gap-3">
-        <a 
-          id="previewKindleHubBtn"
-          href="/kindle" 
-          target="_blank"
-          class="flex-1 py-3 px-4 rounded-xl bg-dark-surface hover:bg-dark-border border border-emerald-500/30 text-emerald-300 hover:text-emerald-200 font-bold text-xs flex items-center justify-center gap-2 transition-all text-center"
-        >
-          <i data-lucide="external-link" class="w-4 h-4"></i>
-          <span>Open Kindle Hub Preview</span>
-        </a>
+      <!-- File Locations Box -->
+      <div class="p-3.5 rounded-2xl bg-dark-surface/60 border border-dark-border flex items-center justify-between gap-3 text-xs">
+        <div class="min-w-0">
+          <p class="text-[11px] text-slate-400 font-semibold uppercase">Manga Downloads Folder on Mac:</p>
+          <p class="font-mono text-xs text-amber-300 truncate mt-0.5">~/Desktop/manga/downloads</p>
+        </div>
         <button 
-          type="button" 
-          onclick="closeKindleHubModal()" 
-          class="py-3 px-6 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs transition-all shadow-md active:scale-95"
+          onclick="copyDownloadsPath()" 
+          id="copyPathBtn"
+          class="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold shrink-0 active:scale-95 transition-all"
         >
-          Got It
+          Copy Path
         </button>
       </div>
+
+      <!-- Close Button -->
+      <button 
+        type="button" 
+        onclick="closeOpenMTPModal()" 
+        class="w-full py-3 px-6 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs transition-all shadow-md active:scale-95"
+      >
+        Got It!
+      </button>
 
     </div>
   </div>
