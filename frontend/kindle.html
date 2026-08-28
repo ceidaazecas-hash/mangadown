@@ -158,12 +158,12 @@
                 Range: ${escapeHtml(item.chapter_range || 'All')}
               </div>
               ${isDirectCompatible ? `
-                <a href="${item.download_url}" download="${escapeHtml(item.filename)}" class="download-btn">
+                <a href="${item.download_url}" download="${escapeHtml(item.filename)}" onclick="handleKindleDownloadClick(this)" class="download-btn">
                   ⬇️ Download ${escapeHtml(item.format || 'Book')} to Kindle (${item.file_size || 'Ready'})
                 </a>
                 <p style="font-size: 11px; color: #2e7d32; margin-top: 6px; font-weight: bold;">✔ Kindle Browser Compatible (1-Tap Direct Save to Library)</p>
               ` : `
-                <a href="${item.download_url}" download="${escapeHtml(item.filename)}" class="download-btn">
+                <a href="${item.download_url}" download="${escapeHtml(item.filename)}" onclick="handleKindleDownloadClick(this)" class="download-btn">
                   ⬇️ Download (${item.file_size || 'Ready'})
                 </a>
                 <p style="font-size: 11px; color: #666; margin-top: 6px;"><em>Tip: For EPUB, use Send to Kindle Web (amazon.com/sendtokindle). For 1-tap browser download, export as PDF, MOBI, or AZW3!</em></p>
@@ -180,6 +180,15 @@
           </li>
         `;
       }
+    }
+
+    function handleKindleDownloadClick(btn) {
+      btn.style.background = '#333333';
+      btn.innerHTML = '⏳ Downloading... (Takes ~3-5 seconds)';
+      setTimeout(function() {
+        btn.style.background = '#000000';
+        btn.innerHTML = '✅ Downloaded! Check your Kindle Library tab.';
+      }, 4000);
     }
 
     function escapeHtml(str) {
