@@ -34,10 +34,22 @@ app.add_middleware(
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 STATIC_DIR = os.path.join(FRONTEND_DIR, "static")
-DOWNLOADS_DIR = os.path.join(BASE_DIR, "downloads")
 
-os.makedirs(STATIC_DIR, exist_ok=True)
-os.makedirs(DOWNLOADS_DIR, exist_ok=True)
+if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+    DOWNLOADS_DIR = "/tmp/manga_downloads"
+else:
+    DOWNLOADS_DIR = os.path.join(BASE_DIR, "downloads")
+
+try:
+    os.makedirs(STATIC_DIR, exist_ok=True)
+except Exception:
+    pass
+
+try:
+    os.makedirs(DOWNLOADS_DIR, exist_ok=True)
+except Exception:
+    DOWNLOADS_DIR = "/tmp/manga_downloads"
+    os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
