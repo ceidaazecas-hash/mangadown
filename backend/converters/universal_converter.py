@@ -205,35 +205,44 @@ class UniversalConverter:
             title = custom_title
 
         total_pages = len(images)
-        if split_mode in ("auto", "auto_size") or (split_mode == "parts" and split_value == 0):
-            # Smart Auto-Split: Detects 200 MB target volume sizes
-            max_bytes_per_vol = 200 * 1024 * 1024 # 200 MB target
-            total_images_size = sum(len(img) for img in images if isinstance(img, (bytes, bytearray)))
-            
-            if total_images_size > 0:
-                num_parts = max(1, math.ceil(total_images_size / max_bytes_per_vol))
-            else:
-                src_size = os.path.getsize(input_file_path) if os.path.exists(input_file_path) else 0
-                num_parts = max(1, math.ceil(src_size / max_bytes_per_vol))
+        if total_pages == 0:
+            raise ValueError("No images found to split.")
 
-            chunk_size = math.ceil(total_pages / num_parts)
+        if split_mode in ("auto", "auto_size") or (split_mode == "parts" and split_value == 0):
+            # Strict Send to Kindle & E-Reader 200 MB Hard Limit:
+            # Set threshold to 180 MB (188,743,680 bytes) so final output with container overhead
+            # is strictly ~180MB - 185MB and NEVER exceeds 200 MB!
+            target_max_bytes = 180 * 1024 * 1024
+            
+            volume_chunks = []
+            curr_chunk = []
+            curr_bytes = 0
+            
+            for img in images:
+                img_size = len(img) if isinstance(img, (bytes, bytearray)) else 500 * 1024
+                if curr_chunk and (curr_bytes + img_size > target_max_bytes):
+                    volume_chunks.append(curr_chunk)
+                    curr_chunk = [img]
+                    curr_bytes = img_size
+                else:
+                    curr_chunk.append(img)
+                    curr_bytes += img_size
+            
+            if curr_chunk:
+                volume_chunks.append(curr_chunk)
         elif split_mode == "parts":
             num_parts = max(1, int(split_value))
             chunk_size = math.ceil(total_pages / num_parts)
+            volume_chunks = [images[i:i + chunk_size] for i in range(0, total_pages, chunk_size)]
         else:
             chunk_size = max(1, int(split_value))
-            num_parts = math.ceil(total_pages / chunk_size)
+            volume_chunks = [images[i:i + chunk_size] for i in range(0, total_pages, chunk_size)]
 
+        num_parts = len(volume_chunks)
         os.makedirs(output_dir, exist_ok=True)
         created_paths = []
 
-        for part_idx in range(num_parts):
-            start = part_idx * chunk_size
-            end = min(start + chunk_size, total_pages)
-            if start >= total_pages:
-                break
-
-            part_images = images[start:end]
+        for part_idx, part_images in enumerate(volume_chunks):
             part_num = part_idx + 1
             part_title = f"{title} - Vol {part_num:02d} (of {num_parts})" if num_parts > 1 else title
             out_filename = f"{part_title}.{target_format}"
