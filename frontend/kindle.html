@@ -145,6 +145,7 @@
         }
 
         listContainer.innerHTML = items.map(function(item) {
+          const isPdf = (item.format && item.format.toLowerCase().includes('pdf')) || (item.filename && item.filename.toLowerCase().endsWith('.pdf'));
           return `
             <li class="book-card">
               <div class="book-title">${escapeHtml(item.manga_title || item.filename)}</div>
@@ -153,9 +154,17 @@
                 Size: <strong>${item.file_size || 'Ready'}</strong> | 
                 Range: ${escapeHtml(item.chapter_range || 'All')}
               </div>
-              <a href="${item.download_url}" download="${escapeHtml(item.filename)}" class="download-btn">
-                ⬇️ Download to Kindle (${item.file_size || 'Download'})
-              </a>
+              ${isPdf ? `
+                <a href="${item.download_url}" download="${escapeHtml(item.filename)}" class="download-btn">
+                  ⬇️ Download PDF to Kindle (${item.file_size || 'Ready'})
+                </a>
+                <p style="font-size: 11px; color: #2e7d32; margin-top: 6px; font-weight: bold;">✔ Kindle Browser Compatible (1-Tap Direct Save)</p>
+              ` : `
+                <a href="${item.download_url}" download="${escapeHtml(item.filename)}" class="download-btn">
+                  ⬇️ Download (${item.file_size || 'Ready'})
+                </a>
+                <p style="font-size: 11px; color: #666; margin-top: 6px;"><em>Tip: Kindle Browser only allows direct downloading of PDF/MOBI files. (For EPUB, use Send to Kindle Web).</em></p>
+              `}
             </li>
           `;
         }).join("");
