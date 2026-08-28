@@ -1254,18 +1254,26 @@ async function openKindleHubModal() {
   const urlMini = document.getElementById("kindleHubUrlMini");
   const previewBtn = document.getElementById("previewKindleHubBtn");
 
+  // Automatically use the live website URL (e.g. https://mangadown-nine.vercel.app/kindle)
+  const currentOrigin = window.location.origin;
+  let hubUrl = `${currentOrigin}/kindle`;
+
   try {
     const res = await fetch("/api/network/ip");
     if (res.ok) {
       const data = await res.json();
-      cachedHubUrl = data.hub_url;
-      if (urlText) urlText.textContent = data.hub_url;
-      if (urlMini) urlMini.textContent = data.hub_url;
-      if (previewBtn) previewBtn.href = data.hub_url;
+      if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+        hubUrl = data.hub_url || hubUrl;
+      }
     }
   } catch (e) {
     console.error("Network IP lookup error:", e);
   }
+
+  cachedHubUrl = hubUrl;
+  if (urlText) urlText.textContent = hubUrl;
+  if (urlMini) urlMini.textContent = hubUrl;
+  if (previewBtn) previewBtn.href = hubUrl;
 
   if (modal) {
     modal.classList.remove("hidden");
