@@ -7,8 +7,8 @@ import time
 from typing import List, Optional, Dict, Any
 from dataclasses import asdict
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Query, UploadFile, File
-from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse, Response
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Query, UploadFile, File, Request
+from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse, Response, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -140,8 +140,16 @@ class DownloadRequest(BaseModel):
     bundle_mode: str = "single" # single, zip
     data_saver: bool = False
 
+@app.get("/k", include_in_schema=False)
+async def kindle_short_redirect():
+    return RedirectResponse(url="/kindle")
+
 @app.get("/", response_class=HTMLResponse)
-async def serve_index():
+async def serve_index(request: Request):
+    user_agent = request.headers.get("user-agent", "").lower()
+    if "kindle" in user_agent or "silk" in user_agent:
+        return RedirectResponse(url="/kindle")
+
     index_file = os.path.join(FRONTEND_DIR, "index.html")
     if os.path.exists(index_file):
         with open(index_file, "r", encoding="utf-8") as f:
