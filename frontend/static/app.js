@@ -857,77 +857,156 @@ function closeProgressModal() {
 
 // Kindle Integration
 let activeCompletedTask = null;
+// Universal File Converter
+let converterSelectedFile = null;
+let converterSelectedFileId = null;
+
+function openConverterModal(fileId = null, filename = null) {
+  const modal = document.getElementById("converterModal");
+  const statusBox = document.getElementById("converterStatusBox");
+  if (statusBox) statusBox.classList.add("hidden");
+
+  if (fileId && filename) {
+    converterSelectedFileId = fileId;
+    converterSelectedFile = null;
+    document.getElementById("converterFileName").textContent = `Selected: ${filename}`;
+    document.getElementById("converterFileSubtext").textContent = "From your downloads history. Ready to convert!";
+  } else {
+    converterSelectedFile = null;
+    converterSelectedFileId = null;
+    document.getElementById("converterFileName").textContent = "Click or Drag & Drop Any Manga File Here";
+    document.getElementById("converterFileSubtext").textContent = "Supports AZW3, MOBI, EPUB, PDF, CBZ, and ZIP archives";
+  }
+
+  updateConverterFormatUI();
+  if (modal) {
+    modal.classList.remove("hidden");
+    safeCreateIcons();
+  }
+}
+
+function closeConverterModal() {
+  const modal = document.getElementById("converterModal");
+  if (modal) modal.classList.add("hidden");
+}
+
+function handleConverterFileSelected(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  converterSelectedFile = file;
+  converterSelectedFileId = null;
+
+  const sizeFormatted = (file.size / (1024 * 1024)).toFixed(1) + " MB";
+  document.getElementById("converterFileName").textContent = `📄 ${file.name}`;
+  document.getElementById("converterFileSubtext").textContent = `Size: ${sizeFormatted} • Click again to change file`;
+  
+  const statusBox = document.getElementById("converterStatusBox");
+  if (statusBox) statusBox.classList.add("hidden");
+}
+
+function updateConverterFormatUI() {
+  const targetFmt = document.querySelector('input[name="convTargetFormat"]:checked')?.value.toUpperCase() || "AZW3";
+  const label = document.getElementById("targetFormatLabel");
+  if (label) label.textContent = `Output: ${targetFmt}`;
+}
+
+async function executeFileConversion() {
+  const btn = document.getElementById("startConvertBtn");
+  const statusBox = document.getElementById("converterStatusBox");
+  const targetFormat = document.querySelector('input[name="convTargetFormat"]:checked')?.value || "azw3";
+
+  if (!converterSelectedFile && !converterSelectedFileId) {
+    statusBox.className = "p-3.5 rounded-2xl text-xs bg-rose-950/40 border border-rose-500/40 text-rose-200";
+    statusBox.innerHTML = "<p class='font-bold'>Please select or drop a file to convert first!</p>";
+    statusBox.classList.remove("hidden");
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Converting to ${targetFormat.toUpperCase()}...</span>`;
+  safeCreateIcons();
+
+  statusBox.className = "p-3.5 rounded-2xl text-xs bg-purple-950/40 border border-purple-500/40 text-purple-200";
+  statusBox.innerHTML = `
+    <div class="flex items-center gap-2">
+      <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-purple-400"></i>
+      <span class="font-bold">Extracting pages and packaging into ${targetFormat.toUpperCase()}...</span>
+    </div>
+  `;
+  statusBox.classList.remove("hidden");
+  safeCreateIcons();
+
+  try {
+    let res;
+    if (converterSelectedFile) {
+      const formData = new FormData();
+      formData.append("file", converterSelectedFile);
+      formData.append("target_format", targetFormat);
+      res = await fetch("/api/convert/upload", {
+        method: "POST",
+        body: formData
+      });
+    } else {
+      res = await fetch("/api/convert/existing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          file_id: converterSelectedFileId,
+          target_format: targetFormat
+        })
+      });
+    }
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.detail || "Conversion failed.");
+    }
+
+    statusBox.className = "p-4 rounded-2xl text-xs space-y-3 bg-emerald-950/40 border border-emerald-500/40 text-emerald-200";
+    statusBox.innerHTML = `
+      <div class="flex items-center gap-2 text-emerald-300 font-bold text-sm">
+        <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
+        <span>Converted Successfully!</span>
+      </div>
+      <p class="text-xs text-slate-300">File: <strong>${escapeHtml(data.filename)}</strong> (${data.file_size})</p>
+      <a 
+        href="${data.download_url}" 
+        download="${escapeHtml(data.filename)}"
+        class="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs flex items-center justify-center gap-2 transition-all shadow-md active:scale-95"
+      >
+        <i data-lucide="download" class="w-4 h-4"></i>
+        <span>Download ${escapeHtml(data.format)} File (${data.file_size})</span>
+      </a>
+    `;
+    loadDownloadsHistory();
+    safeCreateIcons();
+
+    if (typeof confetti === "function") {
+      confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+    }
+
+  } catch (err) {
+    statusBox.className = "p-3.5 rounded-2xl text-xs space-y-1 bg-rose-950/40 border border-rose-500/40 text-rose-200";
+    statusBox.innerHTML = `
+      <p class="font-bold text-rose-300">Conversion Error</p>
+      <p class="text-[11px]">${escapeHtml(err.message)}</p>
+    `;
+    statusBox.classList.remove("hidden");
+    safeCreateIcons();
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<i data-lucide="play" class="w-4 h-4"></i><span>Convert File Now</span>`;
+    safeCreateIcons();
+  }
+}
+
 let currentKindleFileId = null;
 let currentKindleFilename = "";
 
 function openKindleModalFromProgress() {
   if (activeCompletedTask) {
-    openKindleModal(activeCompletedTask.file_id, activeCompletedTask.filename);
-  }
-}
-
-function openKindleModal(fileId, filename) {
-  currentKindleFileId = fileId;
-  currentKindleFilename = filename;
-  document.getElementById("kindleModalFilename").textContent = filename;
-  
-  const savedEmail = localStorage.getItem("kindle_email") || "nit.ratha01_t9Ucaw@kindle.com";
-  document.getElementById("kindleEmailInput").value = savedEmail;
-  document.getElementById("btnKindleEmailLabel").textContent = savedEmail;
-
-  document.getElementById("kindleStatusBox").classList.add("hidden");
-  document.getElementById("kindleModal").classList.remove("hidden");
-  safeCreateIcons();
-}
-
-function closeKindleModal() {
-  document.getElementById("kindleModal").classList.add("hidden");
-}
-
-async function sendKindleEmailDirect() {
-  const emailInput = document.getElementById("kindleEmailInput");
-  const email = emailInput.value.trim() || "nit.ratha01_t9Ucaw@kindle.com";
-  localStorage.setItem("kindle_email", email);
-
-  const btn = document.getElementById("sendKindleDirectBtn");
-  const statusBox = document.getElementById("kindleStatusBox");
-
-  btn.disabled = true;
-  btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Sending to Kindle...</span>`;
-  safeCreateIcons();
-
-  try {
-    const res = await fetch("/api/kindle/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        file_id: currentKindleFileId,
-        kindle_email: email
-      })
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.detail || "Failed to dispatch to Kindle.");
-    }
-
-    statusBox.className = "p-3.5 rounded-xl text-xs space-y-1 bg-emerald-950/40 border border-emerald-500/40 text-emerald-200";
-    statusBox.innerHTML = `
-      <p class="font-bold text-emerald-300 flex items-center gap-1.5"><i data-lucide="check-circle" class="w-4 h-4"></i> ${data.message || 'Ready for Kindle!'}</p>
-      <p class="text-[11px] text-emerald-200/90">Sent to ${escapeHtml(email)}. Your Kindle device will automatically download and sync this manga when connected to Wi-Fi!</p>
-    `;
-    statusBox.classList.remove("hidden");
-    safeCreateIcons();
-
-  } catch (err) {
-    statusBox.className = "p-3.5 rounded-xl text-xs space-y-1 bg-rose-950/40 border border-rose-500/40 text-rose-200";
-    statusBox.innerHTML = `<p class="font-bold text-rose-300">Delivery Notice</p><p class="text-[11px]">${escapeHtml(err.message)}</p>`;
-    statusBox.classList.remove("hidden");
-    safeCreateIcons();
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = `<i data-lucide="send" class="w-4 h-4"></i><span>Send Directly to <span id="btnKindleEmailLabel" class="font-mono">${escapeHtml(email)}</span></span>`;
-    safeCreateIcons();
+    openOpenMTPModal();
   }
 }
 
@@ -1087,12 +1166,20 @@ async function loadDownloadsHistory() {
             <span class="text-slate-500 font-mono">${item.file_size}</span>
             <div class="flex items-center gap-3">
               <button 
-                onclick="openKindleModal('${item.file_id}', '${escapeHtml(item.filename)}')" 
-                class="flex items-center gap-1 text-amber-400 hover:text-amber-300 font-semibold transition-colors"
-                title="Send to Kindle"
+                onclick="openConverterModal('${item.file_id}', '${escapeHtml(item.filename)}')" 
+                class="flex items-center gap-1 text-purple-400 hover:text-purple-300 font-semibold transition-colors"
+                title="Convert Format"
               >
-                <i data-lucide="tablet" class="w-3.5 h-3.5"></i>
-                <span>Kindle</span>
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                <span>Convert</span>
+              </button>
+              <button 
+                onclick="openOpenMTPModal()" 
+                class="flex items-center gap-1 text-amber-400 hover:text-amber-300 font-semibold transition-colors"
+                title="Transfer to Kindle via OpenMTP"
+              >
+                <i data-lucide="usb" class="w-3.5 h-3.5"></i>
+                <span>OpenMTP</span>
               </button>
               <a 
                 href="${item.download_url}" 

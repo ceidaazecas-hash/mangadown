@@ -137,9 +137,8 @@ class MOBIBuilder:
 
         offset_table = bytearray()
         for idx, off in enumerate(offsets):
-            unique_id = idx * 2
-            offset_table += struct.pack('>IBBB', off, 0, (unique_id >> 16) & 0xFF, (unique_id >> 8) & 0xFF)
-            offset_table[-1] = unique_id & 0xFF
+            unique_id = (idx * 2) & 0xFFFFFF
+            offset_table += struct.pack('>IBBH', off, 0, (unique_id >> 16) & 0xFF, unique_id & 0xFFFF)
 
         offset_table += b'\x00\x00'
 

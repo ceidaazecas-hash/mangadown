@@ -136,3 +136,28 @@ def test_mobi_builder(tmp_path):
     with open(res_path, "rb") as f:
         header = f.read(68)
         assert b"BOOKMOBI" in header
+
+def test_universal_converter(tmp_path):
+    from backend.converters.universal_converter import UniversalConverter
+
+    # 1. Create a base CBZ file
+    img1 = create_dummy_image(800, 1200, "teal")
+    chapters_data = [{"title": "Ch 1", "chapter_display": "1", "images": [img1]}]
+    source_cbz = str(tmp_path / "origin.cbz")
+    CBZBuilder.build_cbz("Origin Manga", chapters_data, source_cbz)
+
+    # 2. Convert CBZ -> AZW3
+    azw3_file = UniversalConverter.convert(source_cbz, "azw3", str(tmp_path))
+    assert os.path.exists(azw3_file)
+    assert os.path.getsize(azw3_file) > 500
+
+    # 3. Convert AZW3 -> EPUB
+    epub_file = UniversalConverter.convert(azw3_file, "epub", str(tmp_path))
+    assert os.path.exists(epub_file)
+    assert os.path.getsize(epub_file) > 500
+
+    # 4. Convert EPUB -> PDF
+    pdf_file = UniversalConverter.convert(epub_file, "pdf", str(tmp_path))
+    assert os.path.exists(pdf_file)
+    assert os.path.getsize(pdf_file) > 500
+

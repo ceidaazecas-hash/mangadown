@@ -68,5 +68,34 @@ def test_kindle_upload():
     assert "file_id" in data
     assert data["filename"] == "my_manga.epub"
 
+def test_convert_upload_api(tmp_path):
+    import io
+    from PIL import Image
+    from backend.converters.cbz_builder import CBZBuilder
+    
+    img = Image.new("RGB", (100, 100), color="blue")
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG")
+    img_data = buf.getvalue()
+    
+    cbz_buf = io.BytesIO()
+    import zipfile
+    with zipfile.ZipFile(cbz_buf, "w") as zf:
+        zf.writestr("001.jpg", img_data)
+        
+    cbz_bytes = cbz_buf.getvalue()
+    
+    response = client.post(
+        "/api/convert/upload",
+        files={"file": ("my_comic.cbz", io.BytesIO(cbz_bytes), "application/vnd.comicbook+zip")},
+        data={"target_format": "azw3"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert "my_comic.azw3" in data["filename"]
+    assert data["format"] == "AZW3"
+
+
 
 

@@ -7,17 +7,19 @@ import time
 from typing import List, Optional, Dict, Any
 from dataclasses import asdict
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Query, UploadFile, File, Request
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Query, UploadFile, File, Form, Request
 from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse, Response, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import aiofiles
 
 from backend.scrapers import get_scraper_for_url, search_manga
 from backend.scrapers.base import MangaInfo, ChapterInfo
 from backend.services.progress_tracker import ProgressTracker
 from backend.services.download_manager import DownloadManager, sanitize_filename, format_file_size
 from backend.services.kindle_service import KindleService
+from backend.converters.universal_converter import UniversalConverter
 
 app = FastAPI(title="MangaDrop - Manga Downloader & Converter")
 
@@ -442,6 +444,122 @@ async def upload_file_for_kindle(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/convert/upload")
+async def convert_uploaded_file(
+    file: UploadFile = File(...),
+    target_format: str = Form("azw3")
+):
+    try:
+        temp_input_dir = os.path.join(DOWNLOADS_DIR, "temp_uploads")
+        os.makedirs(temp_input_dir, exist_ok=True)
+        
+        safe_orig_name = sanitize_filename(file.filename or "uploaded_manga")
+        input_path = os.path.join(temp_input_dir, f"{uuid.uuid4().hex}_{safe_orig_name}")
+        
+        async with aiofiles.open(input_path, "wb") as f_out:
+            while chunk := await file.read(1024 * 1024):
+                await f_out.write(chunk)
+                
+        loop = asyncio.get_running_loop()
+        output_path = await loop.run_in_executor(
+            None,
+            UniversalConverter.convert,
+            input_path,
+            target_format,
+            DOWNLOADS_DIR
+        )
+        
+        try:
+            os.remove(input_path)
+        except Exception:
+            pass
+            
+        file_id = str(uuid.uuid4())
+        download_manager.register_file(file_id, output_path)
+        
+        out_filename = os.path.basename(output_path)
+        file_size = os.path.getsize(output_path)
+        size_formatted = format_file_size(file_size)
+        
+        history_entry = {
+            "file_id": file_id,
+            "manga_title": out_filename,
+            "filename": out_filename,
+            "format": target_format.upper(),
+            "bundle_mode": "single",
+            "chapter_range": "Converted File",
+            "chapter_count": 1,
+            "file_size": size_formatted,
+            "file_path": output_path,
+            "download_url": f"/api/files/{file_id}",
+            "timestamp": time.time()
+        }
+        download_manager.history.insert(0, history_entry)
+        
+        return {
+            "success": True,
+            "file_id": file_id,
+            "filename": out_filename,
+            "format": target_format.upper(),
+            "file_size": size_formatted,
+            "download_url": f"/api/files/{file_id}"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Conversion error: {str(e)}")
+
+class ConvertExistingRequest(BaseModel):
+    file_id: str
+    target_format: str = "azw3"
+
+@app.post("/api/convert/existing")
+async def convert_existing_file(req: ConvertExistingRequest):
+    source_path = download_manager.get_file_path(req.file_id)
+    if not source_path or not os.path.exists(source_path):
+        raise HTTPException(status_code=404, detail="Source file not found or expired.")
+        
+    try:
+        loop = asyncio.get_running_loop()
+        output_path = await loop.run_in_executor(
+            None,
+            UniversalConverter.convert,
+            source_path,
+            req.target_format,
+            DOWNLOADS_DIR
+        )
+        
+        file_id = str(uuid.uuid4())
+        download_manager.register_file(file_id, output_path)
+        
+        out_filename = os.path.basename(output_path)
+        file_size = os.path.getsize(output_path)
+        size_formatted = format_file_size(file_size)
+        
+        history_entry = {
+            "file_id": file_id,
+            "manga_title": out_filename,
+            "filename": out_filename,
+            "format": req.target_format.upper(),
+            "bundle_mode": "single",
+            "chapter_range": "Converted File",
+            "chapter_count": 1,
+            "file_size": size_formatted,
+            "file_path": output_path,
+            "download_url": f"/api/files/{file_id}",
+            "timestamp": time.time()
+        }
+        download_manager.history.insert(0, history_entry)
+        
+        return {
+            "success": True,
+            "file_id": file_id,
+            "filename": out_filename,
+            "format": req.target_format.upper(),
+            "file_size": size_formatted,
+            "download_url": f"/api/files/{file_id}"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Conversion error: {str(e)}")
+
 @app.get("/api/history")
 async def get_history():
     return download_manager.history
@@ -450,3 +568,4 @@ async def get_history():
 async def clear_history():
     download_manager.history.clear()
     return {"message": "History cleared."}
+

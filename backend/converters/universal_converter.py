@@ -1,0 +1,178 @@
+import os
+import io
+import re
+import zipfile
+import struct
+from typing import List, Dict, Any, Tuple, Optional
+from PIL import Image
+
+from backend.converters.pdf_builder import PDFBuilder
+from backend.converters.epub_builder import EPUBBuilder
+from backend.converters.mobi_builder import MOBIBuilder
+from backend.converters.cbz_builder import CBZBuilder
+
+def natural_sort_key(s: str):
+    return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', s)]
+
+class UniversalConverter:
+    """
+    Converts between AZW3, MOBI, EPUB, PDF, CBZ, and ZIP formats.
+    Extracts all images from any source manga container and repackages
+    into the desired target format with bookmarks and high quality.
+    """
+
+    @classmethod
+    def extract_images_from_file(cls, file_path: str) -> Tuple[str, List[bytes]]:
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"File not found: {file_path}")
+
+        base_name = os.path.splitext(os.path.basename(file_path))[0]
+        ext = os.path.splitext(file_path)[1].lower()
+
+        images: List[bytes] = []
+
+        if ext in (".epub", ".cbz", ".zip"):
+            images = cls._extract_from_zip(file_path)
+        elif ext in (".azw3", ".azw", ".mobi", ".prc"):
+            images = cls._extract_from_palmdb(file_path)
+        elif ext == ".pdf":
+            images = cls._extract_from_pdf(file_path)
+        else:
+            # Fallback: try zip then palmdb
+            try:
+                images = cls._extract_from_zip(file_path)
+            except Exception:
+                images = cls._extract_from_palmdb(file_path)
+
+        if not images:
+            raise ValueError(f"Could not extract any images from {os.path.basename(file_path)}.")
+
+        return base_name, images
+
+    @classmethod
+    def _extract_from_zip(cls, file_path: str) -> List[bytes]:
+        images = []
+        valid_exts = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"}
+        with zipfile.ZipFile(file_path, "r") as zf:
+            file_list = [f for f in zf.namelist() if os.path.splitext(f.lower())[1] in valid_exts]
+            file_list.sort(key=natural_sort_key)
+            for fname in file_list:
+                img_data = zf.read(fname)
+                if len(img_data) > 100:
+                    images.append(img_data)
+        return images
+
+    @classmethod
+    def _extract_from_palmdb(cls, file_path: str) -> List[bytes]:
+        images = []
+        with open(file_path, "rb") as f:
+            header = f.read(78)
+            if len(header) < 78 or header[60:68] != b"BOOKMOBI":
+                # Scan entire file for image chunks if palmdb header missing
+                return cls._scan_raw_images(f)
+
+            num_records = struct.unpack_from(">H", header, 76)[0]
+            offset_data = f.read(num_records * 8)
+            offsets = []
+            for i in range(num_records):
+                off = struct.unpack_from(">I", offset_data, i * 8)[0]
+                offsets.append(off)
+            file_size = os.path.getsize(file_path)
+            offsets.append(file_size)
+
+            for i in range(2, num_records):
+                start = offsets[i]
+                length = offsets[i + 1] - start
+                if length <= 0:
+                    continue
+                f.seek(start)
+                magic = f.read(min(16, length))
+                if magic.startswith(b"\xff\xd8\xff") or magic.startswith(b"\x89PNG") or magic.startswith(b"GIF8") or (magic.startswith(b"RIFF") and b"WEBP" in magic):
+                    f.seek(start)
+                    images.append(f.read(length))
+
+        if not images:
+            with open(file_path, "rb") as f:
+                images = cls._scan_raw_images(f)
+
+        return images
+
+    @classmethod
+    def _scan_raw_images(cls, f) -> List[bytes]:
+        f.seek(0)
+        data = f.read()
+        images = []
+        pos = 0
+        while True:
+            jpg_start = data.find(b"\xff\xd8\xff", pos)
+            png_start = data.find(b"\x89PNG\r\n\x1a\n", pos)
+            
+            candidates = [p for p in [jpg_start, png_start] if p != -1]
+            if not candidates:
+                break
+            
+            start = min(candidates)
+            if start == jpg_start:
+                end = data.find(b"\xff\xd9", start + 4)
+                if end != -1:
+                    images.append(data[start:end+2])
+                    pos = end + 2
+                else:
+                    pos = start + 4
+            elif start == png_start:
+                end = data.find(b"IEND\xaeB`\x82", start + 8)
+                if end != -1:
+                    images.append(data[start:end+8])
+                    pos = end + 8
+                else:
+                    pos = start + 8
+        return images
+
+    @classmethod
+    def _extract_from_pdf(cls, file_path: str) -> List[bytes]:
+        from pypdf import PdfReader
+        images = []
+        reader = PdfReader(file_path)
+        for page in reader.pages:
+            for img_obj in page.images:
+                images.append(img_obj.data)
+        return images
+
+    @classmethod
+    def convert(
+        cls,
+        input_file_path: str,
+        target_format: str,
+        output_dir: str,
+        custom_title: Optional[str] = None
+    ) -> str:
+        target_format = target_format.lower().strip().lstrip(".")
+        if target_format not in ("pdf", "epub", "mobi", "azw3", "azw", "cbz"):
+            raise ValueError(f"Unsupported target format: {target_format}")
+
+        title, images = cls.extract_images_from_file(input_file_path)
+        if custom_title:
+            title = custom_title
+
+        os.makedirs(output_dir, exist_ok=True)
+        out_filename = f"{title}.{target_format}"
+        output_path = os.path.join(output_dir, out_filename)
+
+        chapters_data = [
+            {
+                "title": title,
+                "chapter_display": "Chapter 1",
+                "images": images
+            }
+        ]
+
+        if target_format == "pdf":
+            PDFBuilder.build_pdf(title, chapters_data, output_path, author="Converted Manga")
+        elif target_format == "epub":
+            EPUBBuilder.build_epub(title, chapters_data, output_path, author="Converted Manga")
+        elif target_format in ("mobi", "azw3", "azw"):
+            MOBIBuilder.build_mobi(title, chapters_data, output_path, author="Converted Manga")
+        elif target_format == "cbz":
+            CBZBuilder.build_cbz(title, chapters_data, output_path, author="Converted Manga")
+
+        return output_path
