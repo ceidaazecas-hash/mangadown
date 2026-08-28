@@ -68,28 +68,36 @@ class UniversalConverter:
         with open(file_path, "rb") as f:
             header = f.read(78)
             if len(header) < 78 or header[60:68] != b"BOOKMOBI":
-                # Scan entire file for image chunks if palmdb header missing
                 return cls._scan_raw_images(f)
 
             num_records = struct.unpack_from(">H", header, 76)[0]
-            offset_data = f.read(num_records * 8)
-            offsets = []
-            for i in range(num_records):
-                off = struct.unpack_from(">I", offset_data, i * 8)[0]
-                offsets.append(off)
             file_size = os.path.getsize(file_path)
-            offsets.append(file_size)
 
-            for i in range(2, num_records):
-                start = offsets[i]
-                length = offsets[i + 1] - start
-                if length <= 0:
+            for entry_size in (8, 7):
+                f.seek(78)
+                offset_data = f.read(num_records * entry_size)
+                if len(offset_data) < num_records * entry_size:
                     continue
-                f.seek(start)
-                magic = f.read(min(16, length))
-                if magic.startswith(b"\xff\xd8\xff") or magic.startswith(b"\x89PNG") or magic.startswith(b"GIF8") or (magic.startswith(b"RIFF") and b"WEBP" in magic):
+                offsets = []
+                for i in range(num_records):
+                    off = struct.unpack_from(">I", offset_data, i * entry_size)[0]
+                    offsets.append(off)
+                offsets.append(file_size)
+
+                candidate_images = []
+                for i in range(2, num_records):
+                    start = offsets[i]
+                    length = offsets[i + 1] - start
+                    if length <= 0 or start >= file_size:
+                        continue
                     f.seek(start)
-                    images.append(f.read(length))
+                    magic = f.read(min(16, length))
+                    if magic.startswith(b"\xff\xd8\xff") or magic.startswith(b"\x89PNG") or magic.startswith(b"GIF8") or (magic.startswith(b"RIFF") and b"WEBP" in magic):
+                        f.seek(start)
+                        candidate_images.append(f.read(length))
+
+                if candidate_images:
+                    return candidate_images
 
         if not images:
             with open(file_path, "rb") as f:

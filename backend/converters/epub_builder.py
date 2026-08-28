@@ -5,20 +5,11 @@ import uuid
 import html
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Dict, Any, Optional, Tuple
-from PIL import Image
-from backend.utils.image_utils import prepare_image_for_pdf, optimize_for_kindle
+from backend.utils.image_utils import prepare_image_for_pdf, optimize_for_kindle, slice_webtoon_image
 
 def _process_epub_page(item: Tuple[int, str, bool, Any, bool]) -> Optional[Dict[str, Any]]:
-    global_page_counter, ch_title, is_chapter_start, img_item, kindle_opt = item
+    global_page_counter, ch_title, is_chapter_start, raw_bytes, kindle_opt = item
     try:
-        if isinstance(img_item, (bytes, bytearray)):
-            raw_bytes = bytes(img_item)
-        elif isinstance(img_item, str) and os.path.exists(img_item):
-            with open(img_item, "rb") as f:
-                raw_bytes = f.read()
-        else:
-            return None
-
         if kindle_opt:
             jpeg_bytes, w, h = optimize_for_kindle(raw_bytes)
         else:
@@ -69,9 +60,20 @@ class EPUBBuilder:
             ch_images = ch.get("images", [])
             
             for img_idx, img_item in enumerate(ch_images):
-                is_start = (img_idx == 0)
-                tasks.append((global_page_counter, ch_title, is_start, img_item, kindle_optimize))
-                global_page_counter += 1
+                if isinstance(img_item, (bytes, bytearray)):
+                    raw_bytes = bytes(img_item)
+                elif isinstance(img_item, str) and os.path.exists(img_item):
+                    with open(img_item, "rb") as f:
+                        raw_bytes = f.read()
+                else:
+                    continue
+
+                # Auto-slice continuous webtoon strips into full-screen reading pages
+                page_slices = slice_webtoon_image(raw_bytes)
+                for s_idx, s_bytes in enumerate(page_slices):
+                    is_start = (img_idx == 0 and s_idx == 0)
+                    tasks.append((global_page_counter, ch_title, is_start, s_bytes, kindle_optimize))
+                    global_page_counter += 1
 
         if not tasks:
             raise ValueError("No pages found to build EPUB.")

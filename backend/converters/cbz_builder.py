@@ -3,7 +3,7 @@ import io
 import zipfile
 import html
 from typing import List, Dict, Any
-from backend.utils.image_utils import prepare_image_for_pdf
+from backend.utils.image_utils import prepare_image_for_pdf, slice_webtoon_image
 
 class CBZBuilder:
     @staticmethod
@@ -36,15 +36,17 @@ class CBZBuilder:
                 else:
                     continue
 
-                processed = prepare_image_for_pdf(raw_bytes)
-                out_io = io.BytesIO()
-                processed.save(out_io, format="JPEG", quality=92)
-                jpeg_bytes = out_io.getvalue()
-                processed.close()
+                slices = slice_webtoon_image(raw_bytes)
+                for s_bytes in slices:
+                    processed = prepare_image_for_pdf(s_bytes)
+                    out_io = io.BytesIO()
+                    processed.save(out_io, format="JPEG", quality=92)
+                    jpeg_bytes = out_io.getvalue()
+                    processed.close()
 
-                filename = f"page_{global_page_counter:04d}.jpg"
-                pages.append((filename, jpeg_bytes))
-                global_page_counter += 1
+                    filename = f"page_{global_page_counter:04d}.jpg"
+                    pages.append((filename, jpeg_bytes))
+                    global_page_counter += 1
 
         if not pages:
             raise ValueError("No images found to build CBZ.")

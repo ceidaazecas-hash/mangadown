@@ -4,6 +4,7 @@ import time
 import struct
 from typing import List, Dict, Any, Optional
 from PIL import Image
+from backend.utils.image_utils import slice_webtoon_image
 
 class MOBIBuilder:
     """
@@ -19,14 +20,18 @@ class MOBIBuilder:
         output_path: str,
         author: str = "MangaDrop"
     ) -> str:
+        """
+        Builds a standard PalmDOC / MOBI-6 format eBook from manga images.
+        Compatible natively with Amazon Kindle e-readers (.mobi / .azw3).
+        """
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-        # 1. Collect all images and chapter headings
-        all_images: List[bytes] = []
+        # 1. Prepare HTML and Image Records
+        all_images = []
         html_parts = [
-            '<!DOCTYPE html><html><head><meta charset="utf-8"/><title>',
-            manga_title,
-            '</title><style>img{max-width:100%;height:auto;display:block;margin:0 auto;} .chapter{page-break-before:always;text-align:center;}</style></head><body>'
+            '<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>',
+            f'<title>{manga_title}</title></head><body>',
+            f'<h1 style="text-align:center;">{manga_title}</h1>',
         ]
 
         img_idx = 1
@@ -43,9 +48,11 @@ class MOBIBuilder:
                         img_bytes = f.read()
 
                 if img_bytes:
-                    all_images.append(img_bytes)
-                    html_parts.append(f'<div style="page-break-before:always;text-align:center;"><img recindex="{img_idx:05d}" /></div>')
-                    img_idx += 1
+                    slices = slice_webtoon_image(img_bytes)
+                    for s_bytes in slices:
+                        all_images.append(s_bytes)
+                        html_parts.append(f'<div style="page-break-before:always;text-align:center;"><img recindex="{img_idx:05d}" /></div>')
+                        img_idx += 1
 
             html_parts.append('</div>')
 
