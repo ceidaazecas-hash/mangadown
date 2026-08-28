@@ -1,5 +1,6 @@
 import os
 import io
+import time
 import zipfile
 import uuid
 import html
@@ -199,16 +200,21 @@ class EPUBBuilder:
 </html>"""
                 epub.writestr(f"OEBPS/xhtml/{p['xhtml_filename']}", page_html, compress_type=zipfile.ZIP_STORED)
 
+            now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             content_opf = f"""<?xml version="1.0" encoding="UTF-8"?>
 <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="pub-id" prefix="rendition: http://www.idpf.org/vocab/rendition/#">
   <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
     <dc:identifier id="pub-id">urn:uuid:{book_uuid}</dc:identifier>
     <dc:title>{safe_title}</dc:title>
-    <dc:creator>{safe_author}</dc:creator>
+    <dc:creator id="creator">{safe_author}</dc:creator>
     <dc:language>{language or 'en'}</dc:language>
+    <dc:date>{now_iso}</dc:date>
     <meta property="rendition:layout">pre-paginated</meta>
     <meta property="rendition:orientation">auto</meta>
     <meta property="rendition:spread">auto</meta>
+    <meta name="fixed-layout" content="true"/>
+    <meta name="book-type" content="comic"/>
+    <meta name="orientation-lock" content="none"/>
     <meta name="cover" content="img_1"/>
   </metadata>
   <manifest>

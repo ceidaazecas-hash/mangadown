@@ -968,7 +968,7 @@ function handleConverterFileSelected(event) {
 }
 
 function updateConverterFormatUI() {
-  const targetFmt = document.querySelector('input[name="convTargetFormat"]:checked')?.value.toUpperCase() || "AZW3";
+  const targetFmt = document.querySelector('input[name="convTargetFormat"]:checked')?.value.toUpperCase() || "KFX";
   const label = document.getElementById("targetFormatLabel");
   if (label) label.textContent = `Output: ${targetFmt}`;
 }

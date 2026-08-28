@@ -328,10 +328,10 @@
               </div>
             </label>
             <label class="cursor-pointer">
-              <input type="radio" name="exportFormat" value="mobi" class="peer sr-only" onchange="updateFormatUI()">
+              <input type="radio" name="exportFormat" value="kfx" class="peer sr-only" onchange="updateFormatUI()">
               <div class="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-amber-600 peer-checked:text-white peer-checked:shadow-md transition-all flex items-center gap-1">
-                <i data-lucide="tablet" class="w-3.5 h-3.5"></i>
-                <span>MOBI</span>
+                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                <span>KFX</span>
               </div>
             </label>
             <label class="cursor-pointer">
@@ -339,6 +339,13 @@
               <div class="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-amber-600 peer-checked:text-white peer-checked:shadow-md transition-all flex items-center gap-1">
                 <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
                 <span>AZW3</span>
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="exportFormat" value="mobi" class="peer sr-only" onchange="updateFormatUI()">
+              <div class="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-amber-600 peer-checked:text-white peer-checked:shadow-md transition-all flex items-center gap-1">
+                <i data-lucide="tablet" class="w-3.5 h-3.5"></i>
+                <span>MOBI</span>
               </div>
             </label>
             <label class="cursor-pointer">
@@ -692,9 +699,15 @@
             <span>Convert To Format:</span>
             <span id="targetFormatLabel" class="text-[10px] text-purple-400 font-mono">Output: AZW3</span>
           </label>
-          <div class="grid grid-cols-5 gap-1.5 bg-dark-surface p-1.5 rounded-2xl border border-dark-border">
+          <div class="grid grid-cols-6 gap-1.5 bg-dark-surface p-1.5 rounded-2xl border border-dark-border">
             <label class="cursor-pointer text-center">
-              <input type="radio" name="convTargetFormat" value="azw3" checked class="peer sr-only" onchange="updateConverterFormatUI()">
+              <input type="radio" name="convTargetFormat" value="kfx" checked class="peer sr-only" onchange="updateConverterFormatUI()">
+              <div class="py-2 px-1 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-purple-600 peer-checked:text-white peer-checked:shadow-md transition-all">
+                KFX
+              </div>
+            </label>
+            <label class="cursor-pointer text-center">
+              <input type="radio" name="convTargetFormat" value="azw3" class="peer sr-only" onchange="updateConverterFormatUI()">
               <div class="py-2 px-1 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-purple-600 peer-checked:text-white peer-checked:shadow-md transition-all">
                 AZW3
               </div>

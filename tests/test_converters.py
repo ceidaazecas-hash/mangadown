@@ -183,3 +183,26 @@ def test_split_and_convert(tmp_path):
     for p in parts:
         assert os.path.exists(p)
         assert p.endswith(".epub")
+
+def test_kfx_builder(tmp_path):
+    from backend.converters.kfx_builder import KFXBuilder
+    from backend.converters.universal_converter import UniversalConverter
+
+    imgs = [create_dummy_image(800, 1200, "cyan"), create_dummy_image(800, 1200, "magenta")]
+    chapters_data = [{"title": "Chapter 1", "chapter_display": "1", "images": imgs}]
+    out_kfx = str(tmp_path / "test_book.kfx")
+
+    KFXBuilder.build_kfx("Test KFX Book", chapters_data, out_kfx, author="MangaDrop")
+    assert os.path.exists(out_kfx)
+    assert os.path.getsize(out_kfx) > 1000
+
+    with open(out_kfx, "rb") as f:
+        data = f.read()
+        assert b"BOOK" in data
+        assert b"CONT" in data
+        assert b"EBOK" in data
+
+    # Test UniversalConverter round-trip to KFX
+    kfx_converted = UniversalConverter.convert(out_kfx, "epub", str(tmp_path))
+    assert os.path.exists(kfx_converted)
+    assert kfx_converted.endswith(".epub")

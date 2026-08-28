@@ -10,6 +10,7 @@ from backend.converters.pdf_builder import PDFBuilder
 from backend.converters.epub_builder import EPUBBuilder
 from backend.converters.mobi_builder import MOBIBuilder
 from backend.converters.cbz_builder import CBZBuilder
+from backend.converters.kfx_builder import KFXBuilder
 
 def natural_sort_key(s: str):
     return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', s)]
@@ -33,7 +34,7 @@ class UniversalConverter:
 
         if ext in (".epub", ".cbz", ".zip"):
             images = cls._extract_from_zip(file_path)
-        elif ext in (".azw3", ".azw", ".mobi", ".prc"):
+        elif ext in (".azw3", ".azw", ".mobi", ".prc", ".kfx"):
             images = cls._extract_from_palmdb(file_path)
         elif ext == ".pdf":
             images = cls._extract_from_pdf(file_path)
@@ -180,6 +181,8 @@ class UniversalConverter:
             EPUBBuilder.build_epub(title, chapters_data, output_path, author="Converted Manga")
         elif target_format in ("mobi", "azw3", "azw"):
             MOBIBuilder.build_mobi(title, chapters_data, output_path, author="Converted Manga")
+        elif target_format == "kfx":
+            KFXBuilder.build_kfx(title, chapters_data, output_path, author="Converted Manga")
         elif target_format == "cbz":
             CBZBuilder.build_cbz(title, chapters_data, output_path, author="Converted Manga")
 
@@ -197,7 +200,7 @@ class UniversalConverter:
     ) -> List[str]:
         import math
         target_format = target_format.lower().strip().lstrip(".")
-        if target_format not in ("pdf", "epub", "mobi", "azw3", "azw", "cbz"):
+        if target_format not in ("pdf", "epub", "mobi", "azw3", "azw", "cbz", "kfx"):
             raise ValueError(f"Unsupported target format: {target_format}")
 
         title, images = cls.extract_images_from_file(input_file_path)
@@ -275,6 +278,8 @@ class UniversalConverter:
                 EPUBBuilder.build_epub(part_title, chapters_data, output_path, author="Converted Manga")
             elif target_format in ("mobi", "azw3", "azw"):
                 MOBIBuilder.build_mobi(part_title, chapters_data, output_path, author="Converted Manga")
+            elif target_format == "kfx":
+                KFXBuilder.build_kfx(part_title, chapters_data, output_path, author="Converted Manga")
             elif target_format == "cbz":
                 CBZBuilder.build_cbz(part_title, chapters_data, output_path, author="Converted Manga")
 

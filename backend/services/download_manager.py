@@ -17,6 +17,7 @@ from backend.converters.pdf_builder import PDFBuilder
 from backend.converters.epub_builder import EPUBBuilder
 from backend.converters.cbz_builder import CBZBuilder
 from backend.converters.mobi_builder import MOBIBuilder
+from backend.converters.kfx_builder import KFXBuilder
 from backend.services.progress_tracker import ProgressTracker
 
 def sanitize_filename(name: str) -> str:
@@ -275,6 +276,11 @@ class DownloadManager:
                             pool, MOBIBuilder.build_mobi,
                             manga.title, builder_data, final_output_path, manga.author or "Unknown"
                         )
+                    elif export_format == "kfx":
+                        await loop.run_in_executor(
+                            pool, KFXBuilder.build_kfx,
+                            manga.title, builder_data, final_output_path, manga.author or "Unknown"
+                        )
                     elif export_format == "cbz":
                         await loop.run_in_executor(
                             pool, CBZBuilder.build_cbz,
@@ -364,6 +370,8 @@ class DownloadManager:
                             await loop.run_in_executor(pool, EPUBBuilder.build_epub, f"{manga.title} Vol {v_num}", v_builder_data, v_out_path, manga.author)
                         elif export_format in ("mobi", "azw3", "azw"):
                             await loop.run_in_executor(pool, MOBIBuilder.build_mobi, f"{manga.title} Vol {v_num}", v_builder_data, v_out_path, manga.author)
+                        elif export_format == "kfx":
+                            await loop.run_in_executor(pool, KFXBuilder.build_kfx, f"{manga.title} Vol {v_num}", v_builder_data, v_out_path, manga.author)
                         elif export_format == "cbz":
                             await loop.run_in_executor(pool, CBZBuilder.build_cbz, f"{manga.title} Vol {v_num}", v_builder_data, v_out_path, manga.author)
 
@@ -413,6 +421,8 @@ class DownloadManager:
                             await loop.run_in_executor(pool, EPUBBuilder.build_epub, manga.title, single_ch_data, ch_out_path, manga.author)
                         elif export_format in ("mobi", "azw3", "azw"):
                             await loop.run_in_executor(pool, MOBIBuilder.build_mobi, manga.title, single_ch_data, ch_out_path, manga.author)
+                        elif export_format == "kfx":
+                            await loop.run_in_executor(pool, KFXBuilder.build_kfx, manga.title, single_ch_data, ch_out_path, manga.author)
                         elif export_format == "cbz":
                             await loop.run_in_executor(pool, CBZBuilder.build_cbz, manga.title, single_ch_data, ch_out_path, manga.author)
 
