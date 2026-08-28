@@ -669,6 +669,7 @@ function toggleSynopsis() {
 async function triggerDownload() {
   if (!currentManga || selectedChapterIds.size === 0) return;
 
+  const exportFormat = document.querySelector('input[name="exportFormat"]:checked')?.value || "epub";
   const rawBundleMode = document.getElementById("bundleMode").value;
   let bundleMode = rawBundleMode;
   let extraOptions = {};
