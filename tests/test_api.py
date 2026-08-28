@@ -96,6 +96,41 @@ def test_convert_upload_api(tmp_path):
     assert "my_comic.azw3" in data["filename"]
     assert data["format"] == "AZW3"
 
+def test_convert_batch_api():
+    import io
+    from PIL import Image
+    import zipfile
+    
+    img = Image.new("RGB", (100, 100), color="green")
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG")
+    img_data = buf.getvalue()
+    
+    def make_cbz():
+        cbz_buf = io.BytesIO()
+        with zipfile.ZipFile(cbz_buf, "w") as zf:
+            zf.writestr("001.jpg", img_data)
+        return cbz_buf.getvalue()
+        
+    cbz1 = make_cbz()
+    cbz2 = make_cbz()
+    
+    response = client.post(
+        "/api/convert/batch",
+        files=[
+            ("files", ("vol1.cbz", io.BytesIO(cbz1), "application/vnd.comicbook+zip")),
+            ("files", ("vol2.cbz", io.BytesIO(cbz2), "application/vnd.comicbook+zip"))
+        ],
+        data={"target_format": "epub"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["total_converted"] == 2
+    assert "zip_bundle" in data
+    assert data["zip_bundle"] is not None
+
+
 
 
 

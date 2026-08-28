@@ -857,8 +857,8 @@ function closeProgressModal() {
 
 // Kindle Integration
 let activeCompletedTask = null;
-// Universal File Converter
-let converterSelectedFile = null;
+// Universal File Converter (Single & Multi-File Batch)
+let converterSelectedFiles = [];
 let converterSelectedFileId = null;
 
 function openConverterModal(fileId = null, filename = null) {
@@ -868,13 +868,13 @@ function openConverterModal(fileId = null, filename = null) {
 
   if (fileId && filename) {
     converterSelectedFileId = fileId;
-    converterSelectedFile = null;
+    converterSelectedFiles = [];
     document.getElementById("converterFileName").textContent = `Selected: ${filename}`;
     document.getElementById("converterFileSubtext").textContent = "From your downloads history. Ready to convert!";
   } else {
-    converterSelectedFile = null;
+    converterSelectedFiles = [];
     converterSelectedFileId = null;
-    document.getElementById("converterFileName").textContent = "Click or Drag & Drop Any Manga File Here";
+    document.getElementById("converterFileName").textContent = "Click or Drag & Drop Manga Files Here (Multiple Allowed)";
     document.getElementById("converterFileSubtext").textContent = "Supports AZW3, MOBI, EPUB, PDF, CBZ, and ZIP archives";
   }
 
@@ -891,15 +891,23 @@ function closeConverterModal() {
 }
 
 function handleConverterFileSelected(event) {
-  const file = event.target.files?.[0];
-  if (!file) return;
+  const files = Array.from(event.target.files || []);
+  if (!files || files.length === 0) return;
 
-  converterSelectedFile = file;
+  converterSelectedFiles = files;
   converterSelectedFileId = null;
 
-  const sizeFormatted = (file.size / (1024 * 1024)).toFixed(1) + " MB";
-  document.getElementById("converterFileName").textContent = `📄 ${file.name}`;
-  document.getElementById("converterFileSubtext").textContent = `Size: ${sizeFormatted} • Click again to change file`;
+  if (files.length === 1) {
+    const f = files[0];
+    const sizeFormatted = (f.size / (1024 * 1024)).toFixed(1) + " MB";
+    document.getElementById("converterFileName").textContent = `📄 ${f.name}`;
+    document.getElementById("converterFileSubtext").textContent = `Size: ${sizeFormatted} • Click to change`;
+  } else {
+    const totalBytes = files.reduce((acc, f) => acc + f.size, 0);
+    const totalMB = (totalBytes / (1024 * 1024)).toFixed(1) + " MB";
+    document.getElementById("converterFileName").textContent = `📚 ${files.length} Manga Files Selected`;
+    document.getElementById("converterFileSubtext").textContent = `Total: ${totalMB} • Ready for batch conversion!`;
+  }
   
   const statusBox = document.getElementById("converterStatusBox");
   if (statusBox) statusBox.classList.add("hidden");
@@ -916,22 +924,23 @@ async function executeFileConversion() {
   const statusBox = document.getElementById("converterStatusBox");
   const targetFormat = document.querySelector('input[name="convTargetFormat"]:checked')?.value || "azw3";
 
-  if (!converterSelectedFile && !converterSelectedFileId) {
+  if (converterSelectedFiles.length === 0 && !converterSelectedFileId) {
     statusBox.className = "p-3.5 rounded-2xl text-xs bg-rose-950/40 border border-rose-500/40 text-rose-200";
-    statusBox.innerHTML = "<p class='font-bold'>Please select or drop a file to convert first!</p>";
+    statusBox.innerHTML = "<p class='font-bold'>Please select or drop at least one file to convert first!</p>";
     statusBox.classList.remove("hidden");
     return;
   }
 
+  const isBatch = converterSelectedFiles.length > 1;
   btn.disabled = true;
-  btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Converting to ${targetFormat.toUpperCase()}...</span>`;
+  btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Converting ${isBatch ? `${converterSelectedFiles.length} files` : 'file'} to ${targetFormat.toUpperCase()}...</span>`;
   safeCreateIcons();
 
   statusBox.className = "p-3.5 rounded-2xl text-xs bg-purple-950/40 border border-purple-500/40 text-purple-200";
   statusBox.innerHTML = `
     <div class="flex items-center gap-2">
       <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-purple-400"></i>
-      <span class="font-bold">Extracting pages and packaging into ${targetFormat.toUpperCase()}...</span>
+      <span class="font-bold">Extracting pages and converting ${isBatch ? `${converterSelectedFiles.length} files in batch` : 'file'} to ${targetFormat.toUpperCase()}...</span>
     </div>
   `;
   statusBox.classList.remove("hidden");
@@ -939,9 +948,19 @@ async function executeFileConversion() {
 
   try {
     let res;
-    if (converterSelectedFile) {
+    if (isBatch) {
       const formData = new FormData();
-      formData.append("file", converterSelectedFile);
+      for (const f of converterSelectedFiles) {
+        formData.append("files", f);
+      }
+      formData.append("target_format", targetFormat);
+      res = await fetch("/api/convert/batch", {
+        method: "POST",
+        body: formData
+      });
+    } else if (converterSelectedFiles.length === 1) {
+      const formData = new FormData();
+      formData.append("file", converterSelectedFiles[0]);
       formData.append("target_format", targetFormat);
       res = await fetch("/api/convert/upload", {
         method: "POST",
@@ -963,27 +982,72 @@ async function executeFileConversion() {
       throw new Error(data.detail || "Conversion failed.");
     }
 
-    statusBox.className = "p-4 rounded-2xl text-xs space-y-3 bg-emerald-950/40 border border-emerald-500/40 text-emerald-200";
-    statusBox.innerHTML = `
-      <div class="flex items-center gap-2 text-emerald-300 font-bold text-sm">
-        <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
-        <span>Converted Successfully!</span>
-      </div>
-      <p class="text-xs text-slate-300">File: <strong>${escapeHtml(data.filename)}</strong> (${data.file_size})</p>
-      <a 
-        href="${data.download_url}" 
-        download="${escapeHtml(data.filename)}"
-        class="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs flex items-center justify-center gap-2 transition-all shadow-md active:scale-95"
-      >
-        <i data-lucide="download" class="w-4 h-4"></i>
-        <span>Download ${escapeHtml(data.format)} File (${data.file_size})</span>
-      </a>
-    `;
+    if (data.items && data.items.length > 1) {
+      let html = `
+        <div class="space-y-3">
+          <div class="flex items-center gap-2 text-emerald-300 font-bold text-sm">
+            <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
+            <span>Successfully Converted ${data.total_converted} Files to ${escapeHtml(data.target_format)}!</span>
+          </div>
+      `;
+
+      if (data.zip_bundle) {
+        html += `
+          <a 
+            href="${data.zip_bundle.download_url}" 
+            download="${escapeHtml(data.zip_bundle.filename)}"
+            class="w-full py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all shadow-md active:scale-95"
+          >
+            <i data-lucide="archive" class="w-4 h-4"></i>
+            <span>📦 Download All ${data.total_converted} Files as ZIP (${data.zip_bundle.file_size})</span>
+          </a>
+        `;
+      }
+
+      html += `<div class="max-h-48 overflow-y-auto space-y-1.5 pr-1">`;
+      for (const item of data.items) {
+        html += `
+          <div class="p-2 rounded-xl bg-dark-surface border border-dark-border flex items-center justify-between gap-2 text-xs">
+            <span class="truncate font-semibold text-white">${escapeHtml(item.filename)}</span>
+            <a 
+              href="${item.download_url}" 
+              download="${escapeHtml(item.filename)}" 
+              class="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 font-bold hover:bg-emerald-500/30 text-[11px] shrink-0"
+            >
+              ⬇️ Save (${item.file_size})
+            </a>
+          </div>
+        `;
+      }
+      html += `</div></div>`;
+
+      statusBox.className = "p-4 rounded-2xl text-xs space-y-3 bg-emerald-950/40 border border-emerald-500/40 text-emerald-200";
+      statusBox.innerHTML = html;
+
+    } else {
+      statusBox.className = "p-4 rounded-2xl text-xs space-y-3 bg-emerald-950/40 border border-emerald-500/40 text-emerald-200";
+      statusBox.innerHTML = `
+        <div class="flex items-center gap-2 text-emerald-300 font-bold text-sm">
+          <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
+          <span>Converted Successfully!</span>
+        </div>
+        <p class="text-xs text-slate-300">File: <strong>${escapeHtml(data.filename)}</strong> (${data.file_size})</p>
+        <a 
+          href="${data.download_url}" 
+          download="${escapeHtml(data.filename)}"
+          class="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs flex items-center justify-center gap-2 transition-all shadow-md active:scale-95"
+        >
+          <i data-lucide="download" class="w-4 h-4"></i>
+          <span>Download ${escapeHtml(data.format)} File (${data.file_size})</span>
+        </a>
+      `;
+    }
+
     loadDownloadsHistory();
     safeCreateIcons();
 
     if (typeof confetti === "function") {
-      confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+      confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
     }
 
   } catch (err) {
@@ -1335,6 +1399,33 @@ document.addEventListener("DOMContentLoaded", () => {
       const files = dt.files;
       if (files && files.length > 0) {
         uploadFileToKindle(files[0]);
+      }
+    });
+  }
+
+  const convDropzone = document.getElementById("converterDropZone");
+  if (convDropzone) {
+    ["dragenter", "dragover"].forEach(eventName => {
+      convDropzone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        convDropzone.classList.add("border-purple-400", "bg-purple-500/10");
+      }, false);
+    });
+
+    ["dragleave", "drop"].forEach(eventName => {
+      convDropzone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        convDropzone.classList.remove("border-purple-400", "bg-purple-500/10");
+      }, false);
+    });
+
+    convDropzone.addEventListener("drop", (e) => {
+      const dt = e.dataTransfer;
+      const files = dt.files;
+      if (files && files.length > 0) {
+        handleConverterFileSelected({ target: { files: files } });
       }
     });
   }

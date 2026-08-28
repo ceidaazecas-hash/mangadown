@@ -507,6 +507,126 @@ async def convert_uploaded_file(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Conversion error: {str(e)}")
 
+@app.post("/api/convert/batch")
+async def convert_batch_files(
+    files: List[UploadFile] = File(...),
+    target_format: str = Form("azw3")
+):
+    if not files:
+        raise HTTPException(status_code=400, detail="No files provided.")
+
+    temp_input_dir = os.path.join(DOWNLOADS_DIR, "temp_uploads")
+    os.makedirs(temp_input_dir, exist_ok=True)
+
+    saved_inputs = []
+    for file in files:
+        safe_name = sanitize_filename(file.filename or "manga")
+        in_path = os.path.join(temp_input_dir, f"{uuid.uuid4().hex}_{safe_name}")
+        async with aiofiles.open(in_path, "wb") as f_out:
+            while chunk := await file.read(1024 * 1024):
+                await f_out.write(chunk)
+        saved_inputs.append((safe_name, in_path))
+
+    loop = asyncio.get_running_loop()
+    
+    def process_single(input_info):
+        safe_name, in_path = input_info
+        try:
+            out_path = UniversalConverter.convert(
+                in_path,
+                target_format,
+                DOWNLOADS_DIR
+            )
+            return out_path, None
+        except Exception as e:
+            return None, str(e)
+        finally:
+            try:
+                os.remove(in_path)
+            except Exception:
+                pass
+
+    tasks = [loop.run_in_executor(None, process_single, inp) for inp in saved_inputs]
+    results = await asyncio.gather(*tasks)
+
+    converted_files = []
+    for out_path, err in results:
+        if out_path and os.path.exists(out_path):
+            file_id = str(uuid.uuid4())
+            download_manager.register_file(file_id, out_path)
+            fname = os.path.basename(out_path)
+            fsize = os.path.getsize(out_path)
+            size_fmt = format_file_size(fsize)
+
+            history_entry = {
+                "file_id": file_id,
+                "manga_title": fname,
+                "filename": fname,
+                "format": target_format.upper(),
+                "bundle_mode": "single",
+                "chapter_range": "Batch Converted",
+                "chapter_count": 1,
+                "file_size": size_fmt,
+                "file_path": out_path,
+                "download_url": f"/api/files/{file_id}",
+                "timestamp": time.time()
+            }
+            download_manager.history.insert(0, history_entry)
+            converted_files.append({
+                "file_id": file_id,
+                "filename": fname,
+                "file_size": size_fmt,
+                "download_url": f"/api/files/{file_id}"
+            })
+
+    if not converted_files:
+        raise HTTPException(status_code=400, detail="Failed to convert any of the uploaded files.")
+
+    zip_file_info = None
+    import zipfile
+    if len(converted_files) > 1:
+        zip_filename = f"Batch_Converted_{target_format.upper()}s_{int(time.time())}.zip"
+        zip_path = os.path.join(DOWNLOADS_DIR, zip_filename)
+        with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            for item in converted_files:
+                full_p = download_manager.get_file_path(item["file_id"])
+                if full_p and os.path.exists(full_p):
+                    zf.write(full_p, arcname=item["filename"])
+        
+        zip_id = str(uuid.uuid4())
+        download_manager.register_file(zip_id, zip_path)
+        zip_size = os.path.getsize(zip_path)
+        zip_size_fmt = format_file_size(zip_size)
+        
+        zip_entry = {
+            "file_id": zip_id,
+            "manga_title": zip_filename,
+            "filename": zip_filename,
+            "format": "ZIP",
+            "bundle_mode": "batch_zip",
+            "chapter_range": f"{len(converted_files)} Converted Files",
+            "chapter_count": len(converted_files),
+            "file_size": zip_size_fmt,
+            "file_path": zip_path,
+            "download_url": f"/api/files/{zip_id}",
+            "timestamp": time.time()
+        }
+        download_manager.history.insert(0, zip_entry)
+        zip_file_info = {
+            "file_id": zip_id,
+            "filename": zip_filename,
+            "file_size": zip_size_fmt,
+            "download_url": f"/api/files/{zip_id}"
+        }
+
+    return {
+        "success": True,
+        "total_converted": len(converted_files),
+        "target_format": target_format.upper(),
+        "items": converted_files,
+        "zip_bundle": zip_file_info
+    }
+
 class ConvertExistingRequest(BaseModel):
     file_id: str
     target_format: str = "azw3"
