@@ -743,7 +743,17 @@ function updateProgressModal(task) {
     progressModalMsg.textContent = task.message;
   }
 
-  const pct = Math.min(100, Math.max(0, task.progress_percent || 0));
+  // Calculate percentage dynamically from task fields
+  let pct = Number(task.progress_percent);
+  if (isNaN(pct) || pct <= 0) {
+    if (task.total_pages_overall > 0 && task.total_pages_downloaded > 0) {
+      pct = (task.total_pages_downloaded / task.total_pages_overall) * 85.0;
+    } else {
+      pct = 0;
+    }
+  }
+  pct = Math.min(100, Math.max(0, pct));
+
   progressBarFill.style.width = `${pct}%`;
   progressPercentDetail.textContent = `${Math.round(pct)}%`;
 
@@ -755,6 +765,12 @@ function updateProgressModal(task) {
 
   if (task.current_chapter) {
     progressCurrentChapter.textContent = task.current_chapter;
+  }
+
+  if (task.status === "downloading" || (task.total_pages_overall > 0 && pct < 85)) {
+    progressModalTitle.textContent = `Downloading Pages (${Math.round(pct)}%)...`;
+  } else if (task.status === "packaging" || pct >= 85) {
+    progressModalTitle.textContent = "Compiling Book...";
   }
 
   if (task.status === "completed") {
