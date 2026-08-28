@@ -139,12 +139,20 @@ class UniversalConverter:
 
     @classmethod
     def _extract_from_pdf(cls, file_path: str) -> List[bytes]:
-        from pypdf import PdfReader
+        import pymupdf
         images = []
-        reader = PdfReader(file_path)
-        for page in reader.pages:
-            for img_obj in page.images:
-                images.append(img_obj.data)
+        doc = pymupdf.open(file_path)
+        for page in doc:
+            img_list = page.get_images(full=True)
+            if img_list:
+                for img_info in img_list:
+                    xref = img_info[0]
+                    base_image = doc.extract_image(xref)
+                    images.append(base_image["image"])
+            else:
+                pix = page.get_pixmap(dpi=150)
+                images.append(pix.tobytes("jpeg"))
+        doc.close()
         return images
 
     @classmethod
