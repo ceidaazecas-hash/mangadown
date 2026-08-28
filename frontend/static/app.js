@@ -1258,13 +1258,24 @@ let cachedHubUrl = "";
 
 async function openKindleHubModal() {
   const modal = document.getElementById("kindleHubModal");
+  const kindleModal = document.getElementById("kindleModal");
+  if (kindleModal) kindleModal.classList.add("hidden");
+
+  if (modal) {
+    modal.classList.remove("hidden");
+    safeCreateIcons();
+  }
+
   const urlText = document.getElementById("kindleHubUrlText");
   const urlMini = document.getElementById("kindleHubUrlMini");
   const previewBtn = document.getElementById("previewKindleHubBtn");
 
-  // Automatically use the live website URL (e.g. https://mangadown-nine.vercel.app/kindle)
   const currentOrigin = window.location.origin;
-  let hubUrl = `${currentOrigin}/kindle`;
+  let hubUrl = cachedHubUrl || `${currentOrigin}/kindle`;
+
+  if (urlText) urlText.textContent = hubUrl;
+  if (urlMini) urlMini.textContent = hubUrl;
+  if (previewBtn) previewBtn.href = hubUrl;
 
   try {
     const res = await fetch("/api/network/ip");
@@ -1273,19 +1284,13 @@ async function openKindleHubModal() {
       if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
         hubUrl = data.hub_url || hubUrl;
       }
+      cachedHubUrl = hubUrl;
+      if (urlText) urlText.textContent = hubUrl;
+      if (urlMini) urlMini.textContent = hubUrl;
+      if (previewBtn) previewBtn.href = hubUrl;
     }
   } catch (e) {
     console.error("Network IP lookup error:", e);
-  }
-
-  cachedHubUrl = hubUrl;
-  if (urlText) urlText.textContent = hubUrl;
-  if (urlMini) urlMini.textContent = hubUrl;
-  if (previewBtn) previewBtn.href = hubUrl;
-
-  if (modal) {
-    modal.classList.remove("hidden");
-    safeCreateIcons();
   }
 }
 
