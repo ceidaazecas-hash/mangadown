@@ -247,14 +247,19 @@ class UniversalConverter:
             volume_chunks = [images[i:i + chunk_size] for i in range(0, total_pages, chunk_size)]
 
         num_parts = len(volume_chunks)
-        os.makedirs(output_dir, exist_ok=True)
+        if num_parts > 1:
+            target_dir = os.path.join(output_dir, f"{title} [Split Volumes]")
+        else:
+            target_dir = output_dir
+            
+        os.makedirs(target_dir, exist_ok=True)
         created_paths = []
 
         for part_idx, part_images in enumerate(volume_chunks):
             part_num = part_idx + 1
             part_title = f"{title} - Vol {part_num:02d} (of {num_parts})" if num_parts > 1 else title
             out_filename = f"{part_title}.{target_format}"
-            output_path = os.path.join(output_dir, out_filename)
+            output_path = os.path.join(target_dir, out_filename)
 
             chapters_data = [
                 {

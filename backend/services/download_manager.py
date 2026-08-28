@@ -281,40 +281,74 @@ class DownloadManager:
                             manga.title, builder_data, final_output_path, manga.author or "Unknown"
                         )
 
-                elif bundle_mode == "volumes":
-                    # Split series into lightweight volumes (25 chapters per volume)
-                    import math
-                    vol_size = int(extra_options.get("volume_size", 25)) if extra_options else 25
-                    total_chs = len(chapters_data)
-                    num_vols = math.ceil(total_chs / vol_size)
-                    
+                elif bundle_mode.startswith("volumes"):
+                    # Dedicated Folder for this Manga Download (No scattering!)
+                    manga_folder_name = f"{safe_manga_title} ({range_str}) [Volumes]"
+                    manga_folder = os.path.join(self.download_dir, manga_folder_name)
+                    os.makedirs(manga_folder, exist_ok=True)
+
+                    # Determine Volume Chunking: Size-based (e.g. <= 25MB) or Chapter-count based
+                    max_size_mb = extra_options.get("max_size_mb") if extra_options else None
+                    if bundle_mode == "volumes_25mb" or max_size_mb == 25:
+                        max_size_mb = 25
+                    elif bundle_mode == "volumes_50mb" or max_size_mb == 50:
+                        max_size_mb = 50
+
+                    volume_groups = []
+                    if max_size_mb:
+                        # Dynamic Size-based Grouping (Strictly <= target MB)
+                        target_bytes = int(max_size_mb * 0.90 * 1024 * 1024)
+                        curr_group = []
+                        curr_bytes = 0
+
+                        for cd in chapters_data:
+                            if not cd["downloaded_files"]:
+                                continue
+                            ch_bytes = sum(os.path.getsize(f) for f in cd["downloaded_files"] if os.path.exists(f))
+                            if curr_group and (curr_bytes + ch_bytes > target_bytes):
+                                volume_groups.append(curr_group)
+                                curr_group = [cd]
+                                curr_bytes = ch_bytes
+                            else:
+                                curr_group.append(cd)
+                                curr_bytes += ch_bytes
+
+                        if curr_group:
+                            volume_groups.append(curr_group)
+                    else:
+                        # Chapter count based (e.g. 25 chapters)
+                        vol_size = int(extra_options.get("volume_size", 25)) if extra_options else 25
+                        total_chs = len(chapters_data)
+                        num_vols = math.ceil(total_chs / vol_size)
+                        for v_idx in range(num_vols):
+                            v_start = v_idx * vol_size
+                            v_end = min(v_start + vol_size, total_chs)
+                            v_chs = [cd for cd in chapters_data[v_start:v_end] if cd["downloaded_files"]]
+                            if v_chs:
+                                volume_groups.append(v_chs)
+
+                    num_vols = len(volume_groups)
                     first_vol_file_id = None
                     first_vol_fname = None
                     first_vol_size_fmt = ""
-                    
-                    for v_idx in range(num_vols):
-                        v_start = v_idx * vol_size
-                        v_end = min(v_start + vol_size, total_chs)
-                        v_chapters = chapters_data[v_start:v_end]
-                        if not v_chapters:
-                            continue
-                            
+
+                    for v_idx, v_chapters in enumerate(volume_groups):
+                        v_num = v_idx + 1
                         v_start_disp = v_chapters[0]["chapter_display"]
                         v_end_disp = v_chapters[-1]["chapter_display"]
                         v_range = f"{v_start_disp}" if len(v_chapters) == 1 else f"{v_start_disp}-{v_end_disp}"
-                        v_num = v_idx + 1
                         v_fname = f"{safe_manga_title} - Vol {v_num:02d} ({sanitize_filename(v_range)}).{export_format}"
-                        v_out_path = os.path.join(self.download_dir, v_fname)
+                        v_out_path = os.path.join(manga_folder, v_fname)
                         v_fid = str(uuid.uuid4())
                         self.register_file(v_fid, v_out_path)
-                        
+
                         if v_idx == 0:
                             first_vol_file_id = v_fid
                             first_vol_fname = v_fname
                             file_id = v_fid
                             out_filename = v_fname
                             final_output_path = v_out_path
-                            
+
                         v_builder_data = [
                             {
                                 "title": cd["title"],
@@ -323,7 +357,7 @@ class DownloadManager:
                             }
                             for cd in v_chapters if cd["downloaded_files"]
                         ]
-                        
+
                         if export_format == "pdf":
                             await loop.run_in_executor(pool, PDFBuilder.build_pdf, f"{manga.title} Vol {v_num}", v_builder_data, v_out_path, manga.author)
                         elif export_format == "epub":
@@ -332,13 +366,13 @@ class DownloadManager:
                             await loop.run_in_executor(pool, MOBIBuilder.build_mobi, f"{manga.title} Vol {v_num}", v_builder_data, v_out_path, manga.author)
                         elif export_format == "cbz":
                             await loop.run_in_executor(pool, CBZBuilder.build_cbz, f"{manga.title} Vol {v_num}", v_builder_data, v_out_path, manga.author)
-                            
+
                         v_size = os.path.getsize(v_out_path)
                         v_size_fmt = format_file_size(v_size)
-                        
+
                         if v_idx == 0:
                             first_vol_size_fmt = v_size_fmt
-                            
+
                         self.history.insert(0, {
                             "file_id": v_fid,
                             "manga_title": f"{manga.title} - Vol {v_num:02d}",

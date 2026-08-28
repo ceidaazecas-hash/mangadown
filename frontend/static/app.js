@@ -674,7 +674,13 @@ async function triggerDownload() {
   let bundleMode = rawBundleMode;
   let extraOptions = {};
 
-  if (rawBundleMode === "volumes_25") {
+  if (rawBundleMode === "volumes_25mb") {
+    bundleMode = "volumes";
+    extraOptions = { max_size_mb: 25 };
+  } else if (rawBundleMode === "volumes_50mb") {
+    bundleMode = "volumes";
+    extraOptions = { max_size_mb: 50 };
+  } else if (rawBundleMode === "volumes_25") {
     bundleMode = "volumes";
     extraOptions = { volume_size: 25 };
   } else if (rawBundleMode === "volumes_50") {
