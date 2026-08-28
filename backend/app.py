@@ -88,15 +88,41 @@ async def kindle_hub_view():
             return HTMLResponse(f.read())
     return HTMLResponse("<h1>Kindle Hub Ready</h1>")
 
+import httpx
+
+def make_short_url(target_url: str) -> str:
+    try:
+        r = httpx.get("https://ulvis.net/API/write/get", params={"url": target_url, "type": "json"}, verify=False, timeout=3.0)
+        if r.status_code == 200:
+            data = r.json()
+            if data.get("success") and data.get("data", {}).get("url"):
+                return data["data"]["url"]
+    except Exception:
+        pass
+    try:
+        r = httpx.get("https://clck.ru/--", params={"url": target_url}, verify=False, timeout=3.0)
+        if r.status_code == 200 and r.text.startswith("http"):
+            return r.text.strip()
+    except Exception:
+        pass
+    return target_url
+
 @app.get("/api/network/ip")
-async def get_network_ip():
+async def get_network_ip(request: Request):
     local_ip = get_local_ip()
     port = 8000
     hub_url = f"http://{local_ip}:{port}/kindle"
+    
+    origin = str(request.base_url).rstrip('/')
+    public_k = f"{origin}/k"
+    short_k = await asyncio.to_thread(make_short_url, public_k)
+
     return {
         "local_ip": local_ip,
         "port": port,
-        "hub_url": hub_url
+        "hub_url": hub_url,
+        "public_k": public_k,
+        "short_k": short_k
     }
 
 tracker = ProgressTracker()

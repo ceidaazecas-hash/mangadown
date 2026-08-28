@@ -1283,7 +1283,10 @@ async function openKindleHubModal() {
     const res = await fetch("/api/network/ip");
     if (res.ok) {
       const data = await res.json();
+      const shortUrl = data.short_k || data.public_k || `${currentOrigin}/k`;
       localHubUrl = data.hub_url || `http://${data.local_ip}:8000/kindle`;
+      if (publicUrlText) publicUrlText.textContent = shortUrl;
+      if (urlMini) urlMini.textContent = shortUrl;
       if (localUrlText) localUrlText.textContent = localHubUrl;
     }
   } catch (e) {
