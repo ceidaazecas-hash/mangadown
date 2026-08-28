@@ -910,33 +910,38 @@ function switchConverterTab(tab) {
   safeCreateIcons();
 }
 
-function openConverterModal(tabOrFileId = 'convert', filename = null) {
+function openStudioModal(tabOrFileId = 'keep', filename = null) {
   const modal = document.getElementById("converterModal");
   const statusBox = document.getElementById("converterStatusBox");
   if (statusBox) statusBox.classList.add("hidden");
 
-  let initialTab = 'convert';
-  if (tabOrFileId === 'split' || tabOrFileId === 'convert') {
-    initialTab = tabOrFileId;
-    converterSelectedFiles = [];
-    converterSelectedFileId = null;
-    document.getElementById("converterFileName").textContent = "Click or Drag & Drop Manga Files Here";
-    document.getElementById("converterFileSubtext").textContent = "Select any AZW3, MOBI, EPUB, PDF, CBZ, or ZIP files";
+  if (tabOrFileId === 'split') {
+    // If opened wanting split, set split option to 25MB
+    const split25 = document.querySelector('input[name="splitSizeOption"][value="25"]');
+    if (split25) split25.checked = true;
   } else if (tabOrFileId && filename) {
     converterSelectedFileId = tabOrFileId;
     converterSelectedFiles = [];
     document.getElementById("converterFileName").textContent = `Selected: ${filename}`;
     document.getElementById("converterFileSubtext").textContent = "From your downloads history. Ready to process!";
+  } else {
+    converterSelectedFiles = [];
+    converterSelectedFileId = null;
+    document.getElementById("converterFileName").textContent = "Click or Drag & Drop Manga Files Here";
+    document.getElementById("converterFileSubtext").textContent = "Supports AZW3, KFX, EPUB, PDF, MOBI, CBZ, and ZIP files";
   }
 
-  switchConverterTab(initialTab);
-  updateConverterFormatUI();
-  updateSplitSizeUI();
+  updateStudioUI();
 
   if (modal) {
     modal.classList.remove("hidden");
     safeCreateIcons();
   }
+}
+
+// Backward compatibility alias
+function openConverterModal(tabOrFileId = 'keep', filename = null) {
+  openStudioModal(tabOrFileId, filename);
 }
 
 function closeConverterModal() {
@@ -965,58 +970,72 @@ function handleConverterFileSelected(event) {
   
   const statusBox = document.getElementById("converterStatusBox");
   if (statusBox) statusBox.classList.add("hidden");
+  updateStudioUI();
 }
 
-function updateConverterFormatUI() {
-  const targetFmt = document.querySelector('input[name="convTargetFormat"]:checked')?.value.toUpperCase() || "KFX";
-  const label = document.getElementById("targetFormatLabel");
-  if (label) label.textContent = `Output: ${targetFmt}`;
-}
+function updateStudioUI() {
+  const targetFmt = document.querySelector('input[name="convTargetFormat"]:checked')?.value || "keep";
+  const splitOpt = document.querySelector('input[name="splitSizeOption"]:checked')?.value || "none";
 
-function updateSplitSizeUI() {
-  const sizeMb = document.querySelector('input[name="splitSizeOption"]:checked')?.value || "25";
-  const label = document.getElementById("splitSizeLabel");
-  const actionText = document.getElementById("modalActionBtnText");
-  if (label) label.textContent = sizeMb === "25" ? "📧 25 MB (Email-Safe)" : sizeMb === "50" ? "📦 50 MB (Balanced)" : "📚 200 MB (Send-to-Kindle Web)";
-  if (actionText && currentConverterTab === "split") {
-    actionText.textContent = `⚡ Auto-Split Manga (${sizeMb}MB Volumes)`;
+  const targetFormatLabel = document.getElementById("targetFormatLabel");
+  const splitSizeLabel = document.getElementById("splitSizeLabel");
+  const summaryText = document.getElementById("studioSummaryText");
+  const actionBtnText = document.getElementById("modalActionBtnText");
+
+  // Update Format Label
+  if (targetFormatLabel) {
+    targetFormatLabel.textContent = targetFmt === "keep" ? "Original (Keep)" : `Output: ${targetFmt.toUpperCase()}`;
   }
-}
 
-async function executeModalAction() {
-  if (currentConverterTab === 'split') {
-    await executeFileSplitting();
+  // Update Split Label
+  if (splitSizeLabel) {
+    if (splitOpt === "none") {
+      splitSizeLabel.textContent = "Single File (No Split)";
+    } else if (splitOpt === "25") {
+      splitSizeLabel.textContent = "📧 ≤ 25 MB (Email-Safe)";
+    } else if (splitOpt === "50") {
+      splitSizeLabel.textContent = "📦 ≤ 50 MB (Balanced)";
+    } else if (splitOpt === "200") {
+      splitSizeLabel.textContent = "📚 ≤ 200 MB (Send-to-Kindle)";
+    }
+  }
+
+  // Update Summary and Action Button Text
+  let summary = "";
+  let btnText = "Process File Now";
+
+  if (targetFmt === "keep" && splitOpt === "none") {
+    summary = "⚡ Keeping original format as a single whole file.";
+    btnText = "Process File (Original / Single)";
+  } else if (targetFmt !== "keep" && splitOpt === "none") {
+    summary = `🔄 Converting to ${targetFmt.toUpperCase()} as a single whole file.`;
+    btnText = `Convert to ${targetFmt.toUpperCase()} (Single File)`;
+  } else if (targetFmt === "keep" && splitOpt !== "none") {
+    summary = `📧 Splitting into ≤ ${splitOpt} MB volumes in original format.`;
+    btnText = `Split into ≤${splitOpt}MB Volumes (Original Format)`;
   } else {
-    await executeFileConversion();
+    summary = `⚡ Converting to ${targetFmt.toUpperCase()} and splitting into ≤ ${splitOpt} MB volumes.`;
+    btnText = `Convert & Split into ≤${splitOpt}MB ${targetFmt.toUpperCase()} Volumes`;
   }
+
+  if (summaryText) summaryText.textContent = summary;
+  if (actionBtnText) actionBtnText.textContent = btnText;
 }
 
-async function executeFileSplitting() {
+// Backward compatibility alias for UI triggers
+function updateConverterFormatUI() { updateStudioUI(); }
+function updateSplitSizeUI() { updateStudioUI(); }
+async function executeModalAction() { await executeStudioAction(); }
+
+async function executeStudioAction() {
   const btn = document.getElementById("startConvertBtn");
   const statusBox = document.getElementById("converterStatusBox");
-  
-  // Auto-detect format from the source file extension (No manual format picking needed!)
-  let detectedFormat = "epub";
-  if (converterSelectedFiles.length > 0) {
-    const ext = converterSelectedFiles[0].name.split('.').pop().toLowerCase();
-    if (["pdf", "epub", "azw3", "mobi", "cbz"].includes(ext)) {
-      detectedFormat = ext;
-    }
-  } else if (converterSelectedFileId) {
-    const fn = document.getElementById("converterFileName").textContent;
-    const ext = fn.split('.').pop().toLowerCase();
-    if (["pdf", "epub", "azw3", "mobi", "cbz"].includes(ext)) {
-      detectedFormat = ext;
-    }
-  }
-  const targetFormat = detectedFormat;
-  const splitMode = "auto_size";
-  const targetMb = parseInt(document.querySelector('input[name="splitSizeOption"]:checked')?.value || "25", 10);
-  const splitValue = targetMb;
+  const targetFmt = document.querySelector('input[name="convTargetFormat"]:checked')?.value || "keep";
+  const splitOpt = document.querySelector('input[name="splitSizeOption"]:checked')?.value || "none";
 
   if (converterSelectedFiles.length === 0 && !converterSelectedFileId) {
     statusBox.className = "p-3.5 rounded-2xl text-xs bg-rose-950/40 border border-rose-500/40 text-rose-200";
-    statusBox.innerHTML = "<p class='font-bold'>Please select or drop a manga file to split first!</p>";
+    statusBox.innerHTML = "<p class='font-bold'>Please select or drop at least one manga file first!</p>";
     statusBox.classList.remove("hidden");
     return;
   }
@@ -1024,59 +1043,70 @@ async function executeFileSplitting() {
   btn.disabled = true;
   safeCreateIcons();
 
-  statusBox.className = "p-3.5 rounded-2xl text-xs bg-indigo-950/40 border border-indigo-500/40 text-indigo-200";
+  statusBox.className = "p-3.5 rounded-2xl text-xs bg-purple-950/40 border border-purple-500/40 text-purple-200";
   statusBox.classList.remove("hidden");
   statusBox.innerHTML = `
     <div class="flex items-center gap-2">
-      <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-indigo-400"></i>
-      <span class="font-bold">📧 Splitting into email-safe &le;${targetMb}MB volumes (${targetFormat.toUpperCase()})...</span>
+      <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-purple-400"></i>
+      <span class="font-bold">⚡ Processing manga (${targetFmt === "keep" ? "Original Format" : targetFmt.toUpperCase()}, ${splitOpt === "none" ? "Single File" : `≤${splitOpt}MB Volumes`})...</span>
     </div>
   `;
   safeCreateIcons();
 
   try {
-    let data;
+    const createdItems = [];
 
     if (converterSelectedFiles.length > 0) {
-      const file = converterSelectedFiles[0];
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("target_format", targetFormat);
-      formData.append("split_mode", splitMode);
-      formData.append("split_value", splitValue);
+      for (const file of converterSelectedFiles) {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("target_format", targetFmt);
+        formData.append("split_option", splitOpt);
 
-      const res = await fetch("/api/split/upload", {
+        const res = await fetch("/api/process/upload", {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Processing failed.");
+
+        if (data.mode === "split" && data.items) {
+          createdItems.push(...data.items);
+        } else {
+          createdItems.push(data);
+        }
+      }
+    } else if (converterSelectedFileId) {
+      // Process existing file from download history
+      const formData = new FormData();
+      formData.append("file_id", converterSelectedFileId);
+      formData.append("target_format", targetFmt);
+      formData.append("split_option", splitOpt);
+
+      const res = await fetch("/api/process/upload", {
         method: "POST",
         body: formData
       });
-      data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Splitting failed.");
-    } else if (converterSelectedFileId) {
-      const res = await fetch("/api/convert/split", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          file_id: converterSelectedFileId,
-          target_format: targetFormat,
-          split_mode: splitMode,
-          split_value: splitValue
-        })
-      });
-      data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Splitting failed.");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Processing failed.");
+      if (data.mode === "split" && data.items) {
+        createdItems.push(...data.items);
+      } else {
+        createdItems.push(data);
+      }
     }
 
-    const items = data.items || [];
     let html = `
       <div class="space-y-3">
         <div class="flex items-center gap-2 text-emerald-300 font-bold text-sm">
           <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
-          <span>Successfully split into ${items.length} volumes!</span>
+          <span>Successfully processed ${createdItems.length} file${createdItems.length > 1 ? "s" : ""}!</span>
         </div>
         <div class="max-h-48 overflow-y-auto space-y-1.5 pr-1">
     `;
 
-    items.forEach((item) => {
+    createdItems.forEach((item) => {
       html += `
         <div class="flex items-center justify-between p-2 rounded-xl bg-dark-surface border border-dark-border text-xs">
           <div class="min-w-0 flex-1 mr-2">
@@ -1086,7 +1116,7 @@ async function executeFileSplitting() {
           <a 
             href="${item.download_url}" 
             download="${escapeHtml(item.filename)}"
-            class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-1 shadow-sm shrink-0"
+            class="px-2.5 py-1 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center gap-1 shadow-sm shrink-0"
           >
             <i data-lucide="download" class="w-3 h-3"></i>
             <span>Save</span>
@@ -1112,144 +1142,6 @@ async function executeFileSplitting() {
     safeCreateIcons();
   }
 }
-
-async function executeFileConversion() {
-  const btn = document.getElementById("startConvertBtn");
-  const statusBox = document.getElementById("converterStatusBox");
-  const targetFormat = document.querySelector('input[name="convTargetFormat"]:checked')?.value || "azw3";
-  const splitSelect = document.getElementById("convSplitSelect")?.value || "none";
-
-  let splitMode = null;
-  let splitValue = 0;
-  if (splitSelect.startsWith("parts_")) {
-    splitMode = "parts";
-    splitValue = parseInt(splitSelect.replace("parts_", ""), 10);
-  } else if (splitSelect.startsWith("pages_")) {
-    splitMode = "pages";
-    splitValue = parseInt(splitSelect.replace("pages_", ""), 10);
-  }
-
-  if (converterSelectedFiles.length === 0 && !converterSelectedFileId) {
-    statusBox.className = "p-3.5 rounded-2xl text-xs bg-rose-950/40 border border-rose-500/40 text-rose-200";
-    statusBox.innerHTML = "<p class='font-bold'>Please select or drop at least one file to convert first!</p>";
-    statusBox.classList.remove("hidden");
-    return;
-  }
-
-  btn.disabled = true;
-  safeCreateIcons();
-
-  statusBox.className = "p-3.5 rounded-2xl text-xs bg-purple-950/40 border border-purple-500/40 text-purple-200";
-  statusBox.classList.remove("hidden");
-
-  try {
-    const convertedItems = [];
-
-    if (converterSelectedFiles.length > 0) {
-      const totalFiles = converterSelectedFiles.length;
-
-      for (let i = 0; i < totalFiles; i++) {
-        const file = converterSelectedFiles[i];
-        const currentNum = i + 1;
-        const progressPct = Math.round(((i) / totalFiles) * 100);
-
-        btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>${splitMode ? "Splitting" : "Converting"} (${currentNum}/${totalFiles})...</span>`;
-        statusBox.innerHTML = `
-          <div class="space-y-2">
-            <div class="flex justify-between items-center text-xs font-bold text-purple-300">
-              <span class="truncate">${splitMode ? "Splitting" : "Converting"} (${currentNum}/${totalFiles}): ${escapeHtml(file.name)}...</span>
-              <span class="font-mono">${progressPct}%</span>
-            </div>
-            <div class="w-full bg-dark-surface rounded-full h-2 overflow-hidden border border-purple-500/30">
-              <div class="bg-gradient-to-r from-purple-500 to-brand-accent h-full transition-all duration-300 rounded-full" style="width: ${progressPct}%"></div>
-            </div>
-          </div>
-        `;
-        safeCreateIcons();
-
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("target_format", targetFormat);
-
-        const res = await fetch("/api/convert/upload", {
-          method: "POST",
-          body: formData
-        });
-
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.detail || `Conversion failed for ${file.name}.`);
-        }
-
-        if (splitMode) {
-          // Now split this converted file into the requested volume parts
-          const splitRes = await fetch("/api/convert/split", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              file_id: data.file_id,
-              target_format: targetFormat,
-              split_mode: splitMode,
-              split_value: splitValue
-            })
-          });
-          const splitData = await splitRes.json();
-          if (splitRes.ok && splitData.items) {
-            convertedItems.push(...splitData.items);
-          } else {
-            convertedItems.push(data);
-          }
-        } else {
-          convertedItems.push(data);
-        }
-      }
-
-    } else if (converterSelectedFileId) {
-      btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>${splitMode ? "Splitting" : "Converting"}...</span>`;
-      statusBox.innerHTML = `
-        <div class="flex items-center gap-2">
-          <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-purple-400"></i>
-          <span class="font-bold">${splitMode ? "Splitting into volumes" : "Converting file"} to ${targetFormat.toUpperCase()}...</span>
-        </div>
-      `;
-      safeCreateIcons();
-
-      if (splitMode) {
-        const res = await fetch("/api/convert/split", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            file_id: converterSelectedFileId,
-            target_format: targetFormat,
-            split_mode: splitMode,
-            split_value: splitValue
-          })
-        });
-
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.detail || "Splitting failed.");
-        }
-        if (data.items) {
-          convertedItems.push(...data.items);
-        }
-      } else {
-        const res = await fetch("/api/convert/existing", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            file_id: converterSelectedFileId,
-            target_format: targetFormat
-          })
-        });
-
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.detail || "Conversion failed.");
-        }
-        convertedItems.push(data);
-      }
-    }
 
     // Done Converting!
     if (convertedItems.length > 1) {

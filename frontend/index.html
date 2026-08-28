@@ -86,14 +86,9 @@
       </div>
 
       <div class="flex items-center gap-2 sm:gap-3">
-        <button onclick="openConverterModal('convert')" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-xs sm:text-sm font-bold text-purple-300 transition-all shadow-sm">
-          <i data-lucide="refresh-cw" class="w-4 h-4 text-purple-400"></i>
-          <span>Converter</span>
-        </button>
-
-        <button onclick="openConverterModal('split')" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-xs sm:text-sm font-bold text-indigo-300 transition-all shadow-sm">
-          <i data-lucide="scissors" class="w-4 h-4 text-indigo-400"></i>
-          <span>Splitter</span>
+        <button onclick="openStudioModal()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-500/15 to-indigo-500/15 hover:from-purple-500/25 hover:to-indigo-500/25 border border-purple-500/30 text-xs sm:text-sm font-bold text-purple-300 transition-all shadow-sm">
+          <i data-lucide="sparkles" class="w-4 h-4 text-purple-400"></i>
+          <span>Convert & Split</span>
         </button>
 
         <button onclick="openOpenMTPModal()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-xs sm:text-sm font-bold text-amber-300 transition-all shadow-sm">
@@ -637,27 +632,20 @@
   <div id="converterModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
     <div class="max-w-lg w-full rounded-3xl bg-dark-card border border-purple-500/40 p-6 sm:p-8 space-y-6 shadow-2xl relative overflow-hidden animate-scale-up text-left">
       
-      <!-- Top header with Tabs -->
+  <!-- UNIFIED MANGA PROCESSING STUDIO (CONVERT & SPLIT) MODAL -->
+  <div id="converterModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="max-w-lg w-full rounded-3xl bg-dark-card border border-dark-border p-6 sm:p-8 space-y-5 shadow-2xl relative overflow-hidden animate-scale-up text-left">
+      
+      <!-- Modal Header -->
       <div class="flex items-center justify-between pb-3 border-b border-dark-border">
-        <div class="flex items-center gap-2 bg-dark-surface p-1 rounded-2xl border border-dark-border">
-          <button 
-            type="button" 
-            id="tabBtnConvert" 
-            onclick="switchConverterTab('convert')" 
-            class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-purple-600 text-white shadow transition-all"
-          >
-            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-            <span>Format Converter</span>
-          </button>
-          <button 
-            type="button" 
-            id="tabBtnSplit" 
-            onclick="switchConverterTab('split')" 
-            class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-all"
-          >
-            <i data-lucide="scissors" class="w-3.5 h-3.5 text-indigo-400"></i>
-            <span>File Splitter</span>
-          </button>
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white shadow-md">
+            <i data-lucide="sparkles" class="w-4.5 h-4.5"></i>
+          </div>
+          <div>
+            <h3 class="text-sm sm:text-base font-extrabold text-white">Manga Studio &bull; Convert & Split</h3>
+            <p class="text-[11px] text-slate-400">Convert format, split into lightweight volumes, or both at once</p>
+          </div>
         </div>
         <button onclick="closeConverterModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-dark-surface">
           <i data-lucide="x" class="w-5 h-5"></i>
@@ -673,7 +661,7 @@
         <input 
           type="file" 
           id="converterFileInput" 
-          accept=".azw3,.mobi,.epub,.pdf,.cbz,.zip,.prc" 
+          accept=".azw3,.kfx,.mobi,.epub,.pdf,.cbz,.zip,.prc" 
           multiple
           class="hidden" 
           onchange="handleConverterFileSelected(event)"
@@ -686,99 +674,107 @@
             Click or Drag & Drop Manga Files Here
           </p>
           <p id="converterFileSubtext" class="text-[11px] text-slate-400 mt-0.5">
-            Select any AZW3, MOBI, EPUB, PDF, CBZ, or ZIP files
+            Supports AZW3, KFX, EPUB, PDF, MOBI, CBZ, and ZIP files
           </p>
         </div>
       </div>
 
-      <!-- TAB 1: CONVERT OPTIONS -->
-      <div id="convertTabSection" class="space-y-4">
-        <!-- Target Format Selector -->
-        <div class="space-y-2">
-          <label class="text-xs font-bold text-slate-300 flex items-center justify-between">
-            <span>Convert To Format:</span>
-            <span id="targetFormatLabel" class="text-[10px] text-purple-400 font-mono">Output: AZW3</span>
+      <!-- SECTION 1: FORMAT SELECTION (KEEP OR CHANGE) -->
+      <div class="space-y-1.5">
+        <label class="text-xs font-bold text-slate-300 flex items-center justify-between">
+          <span class="flex items-center gap-1.5">
+            <i data-lucide="file-type" class="w-3.5 h-3.5 text-purple-400"></i>
+            <span>1. Format:</span>
+          </span>
+          <span id="targetFormatLabel" class="text-[10px] text-purple-400 font-mono">Original (Keep)</span>
+        </label>
+        <div class="grid grid-cols-4 sm:grid-cols-7 gap-1.5 bg-dark-surface p-1.5 rounded-2xl border border-dark-border">
+          <label class="cursor-pointer text-center">
+            <input type="radio" name="convTargetFormat" value="keep" checked class="peer sr-only" onchange="updateStudioUI()">
+            <div class="py-2 px-1 rounded-xl text-[11px] sm:text-xs font-bold text-slate-400 peer-checked:bg-purple-600 peer-checked:text-white peer-checked:shadow-md transition-all">
+              ⚡ Keep
+            </div>
           </label>
-          <div class="grid grid-cols-6 gap-1.5 bg-dark-surface p-1.5 rounded-2xl border border-dark-border">
-            <label class="cursor-pointer text-center">
-              <input type="radio" name="convTargetFormat" value="kfx" checked class="peer sr-only" onchange="updateConverterFormatUI()">
-              <div class="py-2 px-1 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-purple-600 peer-checked:text-white peer-checked:shadow-md transition-all">
-                KFX
-              </div>
-            </label>
-            <label class="cursor-pointer text-center">
-              <input type="radio" name="convTargetFormat" value="azw3" class="peer sr-only" onchange="updateConverterFormatUI()">
-              <div class="py-2 px-1 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-purple-600 peer-checked:text-white peer-checked:shadow-md transition-all">
-                AZW3
-              </div>
-            </label>
-            <label class="cursor-pointer text-center">
-              <input type="radio" name="convTargetFormat" value="mobi" class="peer sr-only" onchange="updateConverterFormatUI()">
-              <div class="py-2 px-1 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-purple-600 peer-checked:text-white peer-checked:shadow-md transition-all">
-                MOBI
-              </div>
-            </label>
-            <label class="cursor-pointer text-center">
-              <input type="radio" name="convTargetFormat" value="epub" class="peer sr-only" onchange="updateConverterFormatUI()">
-              <div class="py-2 px-1 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-purple-600 peer-checked:text-white peer-checked:shadow-md transition-all">
-                EPUB
-              </div>
-            </label>
-            <label class="cursor-pointer text-center">
-              <input type="radio" name="convTargetFormat" value="pdf" class="peer sr-only" onchange="updateConverterFormatUI()">
-              <div class="py-2 px-1 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-purple-600 peer-checked:text-white peer-checked:shadow-md transition-all">
-                PDF
-              </div>
-            </label>
-            <label class="cursor-pointer text-center">
-              <input type="radio" name="convTargetFormat" value="cbz" class="peer sr-only" onchange="updateConverterFormatUI()">
-              <div class="py-2 px-1 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-purple-600 peer-checked:text-white peer-checked:shadow-md transition-all">
-                CBZ
-              </div>
-            </label>
-          </div>
+          <label class="cursor-pointer text-center">
+            <input type="radio" name="convTargetFormat" value="kfx" class="peer sr-only" onchange="updateStudioUI()">
+            <div class="py-2 px-1 rounded-xl text-[11px] sm:text-xs font-bold text-slate-400 peer-checked:bg-purple-600 peer-checked:text-white peer-checked:shadow-md transition-all">
+              KFX
+            </div>
+          </label>
+          <label class="cursor-pointer text-center">
+            <input type="radio" name="convTargetFormat" value="azw3" class="peer sr-only" onchange="updateStudioUI()">
+            <div class="py-2 px-1 rounded-xl text-[11px] sm:text-xs font-bold text-slate-400 peer-checked:bg-purple-600 peer-checked:text-white peer-checked:shadow-md transition-all">
+              AZW3
+            </div>
+          </label>
+          <label class="cursor-pointer text-center">
+            <input type="radio" name="convTargetFormat" value="epub" class="peer sr-only" onchange="updateStudioUI()">
+            <div class="py-2 px-1 rounded-xl text-[11px] sm:text-xs font-bold text-slate-400 peer-checked:bg-purple-600 peer-checked:text-white peer-checked:shadow-md transition-all">
+              EPUB
+            </div>
+          </label>
+          <label class="cursor-pointer text-center">
+            <input type="radio" name="convTargetFormat" value="pdf" class="peer sr-only" onchange="updateStudioUI()">
+            <div class="py-2 px-1 rounded-xl text-[11px] sm:text-xs font-bold text-slate-400 peer-checked:bg-purple-600 peer-checked:text-white peer-checked:shadow-md transition-all">
+              PDF
+            </div>
+          </label>
+          <label class="cursor-pointer text-center">
+            <input type="radio" name="convTargetFormat" value="mobi" class="peer sr-only" onchange="updateStudioUI()">
+            <div class="py-2 px-1 rounded-xl text-[11px] sm:text-xs font-bold text-slate-400 peer-checked:bg-purple-600 peer-checked:text-white peer-checked:shadow-md transition-all">
+              MOBI
+            </div>
+          </label>
+          <label class="cursor-pointer text-center">
+            <input type="radio" name="convTargetFormat" value="cbz" class="peer sr-only" onchange="updateStudioUI()">
+            <div class="py-2 px-1 rounded-xl text-[11px] sm:text-xs font-bold text-slate-400 peer-checked:bg-purple-600 peer-checked:text-white peer-checked:shadow-md transition-all">
+              CBZ
+            </div>
+          </label>
         </div>
       </div>
 
-      <!-- TAB 2: SPLIT OPTIONS (EMAIL-SAFE 25MB DEFAULT) -->
-      <div id="splitTabSection" class="hidden space-y-4">
-        <!-- Target Size Selector -->
-        <div class="space-y-1.5">
-          <label class="text-xs font-bold text-slate-300 flex items-center justify-between">
-            <span class="flex items-center gap-1.5">
-              <i data-lucide="mail" class="w-3.5 h-3.5 text-indigo-400"></i>
-              <span>Target Volume Size:</span>
-            </span>
-            <span id="splitSizeLabel" class="text-[10px] text-indigo-400 font-mono">📧 25 MB (Email-Safe)</span>
+      <!-- SECTION 2: VOLUME SPLITTING (KEEP WHOLE OR SPLIT) -->
+      <div class="space-y-1.5">
+        <label class="text-xs font-bold text-slate-300 flex items-center justify-between">
+          <span class="flex items-center gap-1.5">
+            <i data-lucide="scissors" class="w-3.5 h-3.5 text-indigo-400"></i>
+            <span>2. Volume Splitting:</span>
+          </span>
+          <span id="splitSizeLabel" class="text-[10px] text-indigo-400 font-mono">Single File (No Split)</span>
+        </label>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 bg-dark-surface p-1.5 rounded-2xl border border-dark-border">
+          <label class="cursor-pointer text-center">
+            <input type="radio" name="splitSizeOption" value="none" checked class="peer sr-only" onchange="updateStudioUI()">
+            <div class="py-2.5 px-1.5 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:shadow-md transition-all">
+              📚 Single File <span class="text-[10px] opacity-75 block font-normal">No Split</span>
+            </div>
           </label>
-          <div class="grid grid-cols-3 gap-2 bg-dark-surface p-1.5 rounded-2xl border border-dark-border">
-            <label class="cursor-pointer text-center">
-              <input type="radio" name="splitSizeOption" value="25" checked class="peer sr-only" onchange="updateSplitSizeUI()">
-              <div class="py-2.5 px-2 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:shadow-md transition-all">
-                📧 25 MB <span class="text-[10px] opacity-75 block font-normal">Email-Safe</span>
-              </div>
-            </label>
-            <label class="cursor-pointer text-center">
-              <input type="radio" name="splitSizeOption" value="50" class="peer sr-only" onchange="updateSplitSizeUI()">
-              <div class="py-2.5 px-2 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:shadow-md transition-all">
-                📦 50 MB <span class="text-[10px] opacity-75 block font-normal">Balanced</span>
-              </div>
-            </label>
-            <label class="cursor-pointer text-center">
-              <input type="radio" name="splitSizeOption" value="200" class="peer sr-only" onchange="updateSplitSizeUI()">
-              <div class="py-2.5 px-2 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:shadow-md transition-all">
-                📚 200 MB <span class="text-[10px] opacity-75 block font-normal">Send-to-Kindle Web</span>
-              </div>
-            </label>
-          </div>
+          <label class="cursor-pointer text-center">
+            <input type="radio" name="splitSizeOption" value="25" class="peer sr-only" onchange="updateStudioUI()">
+            <div class="py-2.5 px-1.5 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:shadow-md transition-all">
+              📧 &le; 25 MB <span class="text-[10px] opacity-75 block font-normal">Email-Safe</span>
+            </div>
+          </label>
+          <label class="cursor-pointer text-center">
+            <input type="radio" name="splitSizeOption" value="50" class="peer sr-only" onchange="updateStudioUI()">
+            <div class="py-2.5 px-1.5 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:shadow-md transition-all">
+              📦 &le; 50 MB <span class="text-[10px] opacity-75 block font-normal">Balanced</span>
+            </div>
+          </label>
+          <label class="cursor-pointer text-center">
+            <input type="radio" name="splitSizeOption" value="200" class="peer sr-only" onchange="updateStudioUI()">
+            <div class="py-2.5 px-1.5 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:shadow-md transition-all">
+              📚 &le; 200 MB <span class="text-[10px] opacity-75 block font-normal">Send-to-Kindle</span>
+            </div>
+          </label>
         </div>
+      </div>
 
-        <div class="p-3.5 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 flex items-start gap-3">
-          <i data-lucide="mail-check" class="w-4 h-4 text-indigo-400 shrink-0 mt-0.5"></i>
-          <p class="text-[11px] text-slate-300 leading-relaxed">
-            <strong>25 MB Email-Safe volumes</strong> (strictly &le; 23 MB each) attach instantly in Gmail & Outlook and are guaranteed to send to your <strong>@kindle.com</strong> email address!
-          </p>
-        </div>
+      <!-- Studio Helper & Summary Box -->
+      <div id="studioSummaryBox" class="p-3 rounded-2xl bg-dark-surface/70 border border-dark-border text-slate-300 text-[11px] flex items-center gap-2.5">
+        <i data-lucide="info" class="w-4 h-4 text-purple-400 shrink-0"></i>
+        <span id="studioSummaryText">Keeping original format as a single whole file.</span>
       </div>
 
       <!-- Status & Output Message Box -->
@@ -790,11 +786,11 @@
       <button 
         type="button" 
         id="startConvertBtn"
-        onclick="executeModalAction()" 
-        class="w-full py-3.5 px-6 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-purple-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+        onclick="executeStudioAction()" 
+        class="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-purple-500/25 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <i data-lucide="play" class="w-4 h-4"></i>
-        <span id="modalActionBtnText">Convert File Now</span>
+        <span id="modalActionBtnText">Process File Now</span>
       </button>
 
     </div>

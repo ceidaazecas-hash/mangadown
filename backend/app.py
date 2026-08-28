@@ -444,6 +444,139 @@ async def upload_file_for_kindle(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/process/upload")
+async def process_uploaded_manga(
+    file: UploadFile = File(...),
+    target_format: str = Form("keep"),
+    split_option: str = Form("none")
+):
+    """
+    Unified Manga Processing Studio Endpoint:
+    - Target format: 'keep' (original), 'kfx', 'azw3', 'epub', 'pdf', 'mobi', 'cbz'
+    - Split option: 'none' (single file), '25' (<= 25MB), '50' (<= 50MB), '200' (<= 200MB)
+    """
+    orig_raw_name = file.filename or "manga"
+    clean_title = sanitize_filename(os.path.splitext(orig_raw_name)[0])
+    ext = os.path.splitext(orig_raw_name)[1].lower().lstrip(".")
+    if ext == "azw":
+        ext = "azw3"
+
+    effective_format = target_format.lower().strip().lstrip(".")
+    if effective_format in ("keep", "same", "default", "original", "", "auto"):
+        effective_format = ext if ext in ("kfx", "azw3", "mobi", "epub", "pdf", "cbz") else "epub"
+    if effective_format == "azw":
+        effective_format = "azw3"
+
+    temp_input_dir = "/tmp/manga_temp_uploads"
+    os.makedirs(temp_input_dir, exist_ok=True)
+    input_path = os.path.join(temp_input_dir, f"{uuid.uuid4().hex}_{sanitize_filename(orig_raw_name)}")
+
+    try:
+        async with aiofiles.open(input_path, "wb") as f_out:
+            while chunk := await file.read(1024 * 1024):
+                await f_out.write(chunk)
+
+        loop = asyncio.get_running_loop()
+        
+        # Check if splitting is requested
+        if split_option not in ("none", "no", "false", "", "0", None):
+            split_mb = int(split_option) if str(split_option).isdigit() else 25
+            created_paths = await loop.run_in_executor(
+                None,
+                UniversalConverter.split_and_convert,
+                input_path,
+                effective_format,
+                DOWNLOADS_DIR,
+                "auto_size",
+                split_mb,
+                clean_title
+            )
+
+            results = []
+            for p in created_paths:
+                fid = str(uuid.uuid4())
+                download_manager.register_file(fid, p)
+                fname = os.path.basename(p)
+                fsize = os.path.getsize(p)
+                size_fmt = format_file_size(fsize)
+                download_manager.history.insert(0, {
+                    "file_id": fid,
+                    "manga_title": fname,
+                    "filename": fname,
+                    "format": effective_format.upper(),
+                    "bundle_mode": "split_volume",
+                    "chapter_range": "Split Volume",
+                    "chapter_count": 1,
+                    "file_size": size_fmt,
+                    "file_path": p,
+                    "download_url": f"/api/files/{fid}",
+                    "timestamp": time.time()
+                })
+                results.append({
+                    "file_id": fid,
+                    "filename": fname,
+                    "file_size": size_fmt,
+                    "download_url": f"/api/files/{fid}"
+                })
+
+            return {
+                "success": True,
+                "mode": "split",
+                "total_parts": len(results),
+                "target_format": effective_format.upper(),
+                "items": results
+            }
+
+        else:
+            # Single whole file (No split)
+            output_path = await loop.run_in_executor(
+                None,
+                UniversalConverter.convert,
+                input_path,
+                effective_format,
+                DOWNLOADS_DIR,
+                clean_title
+            )
+
+            fid = str(uuid.uuid4())
+            download_manager.register_file(fid, output_path)
+            out_filename = os.path.basename(output_path)
+            file_size = os.path.getsize(output_path)
+            size_fmt = format_file_size(file_size)
+
+            download_manager.history.insert(0, {
+                "file_id": fid,
+                "manga_title": out_filename,
+                "filename": out_filename,
+                "format": effective_format.upper(),
+                "bundle_mode": "single",
+                "chapter_range": "Processed File",
+                "chapter_count": 1,
+                "file_size": size_fmt,
+                "file_path": output_path,
+                "download_url": f"/api/files/{fid}",
+                "timestamp": time.time()
+            })
+
+            return {
+                "success": True,
+                "mode": "single",
+                "file_id": fid,
+                "filename": out_filename,
+                "format": effective_format.upper(),
+                "file_size": size_fmt,
+                "download_url": f"/api/files/{fid}"
+            }
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Processing error: {str(e)}")
+    finally:
+        try:
+            if os.path.exists(input_path):
+                os.remove(input_path)
+        except Exception:
+            pass
+
 @app.post("/api/convert/upload")
 async def convert_uploaded_file(
     file: UploadFile = File(...),
