@@ -2,6 +2,9 @@ import io
 from typing import Tuple, Optional
 from PIL import Image, ImageOps
 
+# Allow processing large webtoon strips safely
+Image.MAX_IMAGE_PIXELS = None
+
 def is_valid_image(image_bytes: bytes) -> bool:
     try:
         with Image.open(io.BytesIO(image_bytes)) as img:

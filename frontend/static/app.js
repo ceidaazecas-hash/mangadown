@@ -58,6 +58,14 @@ const historyDrawer = document.getElementById("historyDrawer");
 const historyListContainer = document.getElementById("historyListContainer");
 const historyBadge = document.getElementById("historyBadge");
 
+function safeCreateIcons() {
+  if (typeof lucide !== "undefined" && lucide && typeof lucide.createIcons === "function") {
+    try {
+      lucide.createIcons();
+    } catch (e) {}
+  }
+}
+
 // Event Listeners
 urlInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
@@ -276,7 +284,7 @@ function displayMangaDetails(manga) {
   renderChapterList();
   renderBatchRangePills();
   mangaView.classList.remove("hidden");
-  lucide.createIcons();
+  safeCreateIcons();
 
   // Scroll smoothly to manga view
   mangaView.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -347,7 +355,7 @@ function updateDedupeBtnUI() {
     btn.className = "px-3 py-1.5 rounded-xl bg-dark-surface text-slate-400 border border-dark-border font-medium flex items-center gap-1.5 transition-all shadow-sm active:scale-95";
     text.textContent = "Show All Versions";
   }
-  lucide.createIcons();
+  safeCreateIcons();
 }
 
 function populateChapterDropdowns(manga) {
@@ -432,7 +440,7 @@ function renderChapterList() {
   }).join("");
 
   updateSelectionState();
-  lucide.createIcons();
+  safeCreateIcons();
 }
 
 function handleChapterRowClick(event, chId, idx) {
@@ -654,7 +662,7 @@ function toggleSynopsis() {
     mangaSynopsis.classList.add("line-clamp-none");
     btn.innerHTML = `<span>Show Less</span><i data-lucide="chevron-up" class="w-3.5 h-3.5"></i>`;
   }
-  lucide.createIcons();
+  safeCreateIcons();
 }
 
 // Download Execution & Real-time Progress Tracking
@@ -690,7 +698,7 @@ async function triggerDownload() {
   if (doneBtn) doneBtn.classList.add("hidden");
 
   progressModal.classList.remove("hidden");
-  lucide.createIcons();
+  safeCreateIcons();
 
   try {
     const res = await fetch("/api/download/start", {
@@ -713,7 +721,7 @@ async function triggerDownload() {
     progressIcon.setAttribute("data-lucide", "alert-triangle");
     progressIcon.classList.remove("animate-spin");
     cancelTaskBtn.textContent = "Close";
-    lucide.createIcons();
+    safeCreateIcons();
   }
 }
 
@@ -798,7 +806,7 @@ function updateProgressModal(task) {
     const doneBtn = document.getElementById("doneProgressBtn");
     if (doneBtn) doneBtn.classList.remove("hidden");
 
-    lucide.createIcons();
+    safeCreateIcons();
 
     // Trigger Confetti Celebration!
     confetti({
@@ -836,7 +844,7 @@ function updateProgressModal(task) {
     const doneBtn = document.getElementById("doneProgressBtn");
     if (doneBtn) doneBtn.classList.add("hidden");
 
-    lucide.createIcons();
+    safeCreateIcons();
   }
 }
 
@@ -869,7 +877,7 @@ function openKindleModal(fileId, filename) {
 
   document.getElementById("kindleStatusBox").classList.add("hidden");
   document.getElementById("kindleModal").classList.remove("hidden");
-  lucide.createIcons();
+  safeCreateIcons();
 }
 
 function closeKindleModal() {
@@ -886,7 +894,7 @@ async function sendKindleEmailDirect() {
 
   btn.disabled = true;
   btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Sending to Kindle...</span>`;
-  lucide.createIcons();
+  safeCreateIcons();
 
   try {
     const res = await fetch("/api/kindle/send", {
@@ -909,17 +917,17 @@ async function sendKindleEmailDirect() {
       <p class="text-[11px] text-emerald-200/90">Sent to ${escapeHtml(email)}. Your Kindle device will automatically download and sync this manga when connected to Wi-Fi!</p>
     `;
     statusBox.classList.remove("hidden");
-    lucide.createIcons();
+    safeCreateIcons();
 
   } catch (err) {
     statusBox.className = "p-3.5 rounded-xl text-xs space-y-1 bg-rose-950/40 border border-rose-500/40 text-rose-200";
     statusBox.innerHTML = `<p class="font-bold text-rose-300">Delivery Notice</p><p class="text-[11px]">${escapeHtml(err.message)}</p>`;
     statusBox.classList.remove("hidden");
-    lucide.createIcons();
+    safeCreateIcons();
   } finally {
     btn.disabled = false;
     btn.innerHTML = `<i data-lucide="send" class="w-4 h-4"></i><span>Send Directly to <span id="btnKindleEmailLabel" class="font-mono">${escapeHtml(email)}</span></span>`;
-    lucide.createIcons();
+    safeCreateIcons();
   }
 }
 
@@ -929,7 +937,7 @@ async function splitFileForKindle() {
 
   btn.disabled = true;
   btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Starting Kindle Splitting...</span>`;
-  lucide.createIcons();
+  safeCreateIcons();
 
   statusBox.className = "p-3.5 rounded-xl text-xs space-y-2 bg-amber-950/40 border border-amber-500/40 text-amber-200";
   statusBox.innerHTML = `
@@ -1004,7 +1012,7 @@ async function splitFileForKindle() {
 
           statusBox.innerHTML = volHtml;
           loadDownloadsHistory();
-          lucide.createIcons();
+          safeCreateIcons();
 
         } else if (task.status === "error") {
           evtSource.close();
@@ -1100,7 +1108,7 @@ async function loadDownloadsHistory() {
       `).join("");
     }
 
-    lucide.createIcons();
+    safeCreateIcons();
   } catch (e) {
     console.error("History load error:", e);
   }
@@ -1175,7 +1183,7 @@ async function uploadFileToKindle(file) {
   if (kindleBtn) kindleBtn.classList.add("hidden");
 
   progressModal.classList.remove("hidden");
-  lucide.createIcons();
+  safeCreateIcons();
 
   const formData = new FormData();
   formData.append("file", file);
@@ -1211,7 +1219,7 @@ async function uploadFileToKindle(file) {
     progressIcon.classList.add("text-rose-400");
     cancelTaskBtn.textContent = "Close";
     cancelTaskBtn.classList.remove("hidden");
-    lucide.createIcons();
+    safeCreateIcons();
   }
 }
 
@@ -1277,7 +1285,7 @@ async function openKindleHubModal() {
 
   if (modal) {
     modal.classList.remove("hidden");
-    lucide.createIcons();
+    safeCreateIcons();
   }
 }
 

@@ -855,7 +855,7 @@
 
   <script src="/static/app.js"></script>
   <script>
-    lucide.createIcons();
+    if (typeof safeCreateIcons === "function") safeCreateIcons();
   </script>
 </body>
 </html>
