@@ -156,7 +156,7 @@ class UniversalConverter:
         custom_title: Optional[str] = None
     ) -> str:
         target_format = target_format.lower().strip().lstrip(".")
-        if target_format not in ("pdf", "epub", "mobi", "azw3", "azw", "cbz"):
+        if target_format not in ("pdf", "epub", "mobi", "azw3", "azw", "cbz", "kfx"):
             raise ValueError(f"Unsupported target format: {target_format}")
 
         title, images = cls.extract_images_from_file(input_file_path)
