@@ -1296,14 +1296,8 @@ function copyKindleHubUrl() {
   }
 }
 
-// Global Keyboard Shortcuts
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") {
-    closeProgressModal();
-    closeKindleModal();
-    closeKindleHubModal();
-  }
-});
+// Global Shortcuts
+// Note: Modals now close ONLY when clicking the explicit Cross (X) or Close button
 
 // Auto-Update & Live Reload Detection
 let currentAppBuildId = null;
