@@ -205,10 +205,19 @@ class UniversalConverter:
             title = custom_title
 
         total_pages = len(images)
-        if total_pages == 0:
-            raise ValueError("No images found to split.")
+        if split_mode in ("auto", "auto_size") or (split_mode == "parts" and split_value == 0):
+            # Smart Auto-Split: Detects 200 MB target volume sizes
+            max_bytes_per_vol = 200 * 1024 * 1024 # 200 MB target
+            total_images_size = sum(len(img) for img in images if isinstance(img, (bytes, bytearray)))
+            
+            if total_images_size > 0:
+                num_parts = max(1, math.ceil(total_images_size / max_bytes_per_vol))
+            else:
+                src_size = os.path.getsize(input_file_path) if os.path.exists(input_file_path) else 0
+                num_parts = max(1, math.ceil(src_size / max_bytes_per_vol))
 
-        if split_mode == "parts":
+            chunk_size = math.ceil(total_pages / num_parts)
+        elif split_mode == "parts":
             num_parts = max(1, int(split_value))
             chunk_size = math.ceil(total_pages / num_parts)
         else:
@@ -226,7 +235,7 @@ class UniversalConverter:
 
             part_images = images[start:end]
             part_num = part_idx + 1
-            part_title = f"{title} (Part {part_num} of {num_parts})" if num_parts > 1 else title
+            part_title = f"{title} - Vol {part_num:02d} (of {num_parts})" if num_parts > 1 else title
             out_filename = f"{part_title}.{target_format}"
             output_path = os.path.join(output_dir, out_filename)
 

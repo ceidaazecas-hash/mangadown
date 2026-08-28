@@ -890,7 +890,7 @@ function switchConverterTab(tab) {
     if (convertSection) convertSection.classList.add("hidden");
     if (splitSection) splitSection.classList.remove("hidden");
     if (actionBtn) actionBtn.className = "w-full py-3.5 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed";
-    if (actionText) actionText.textContent = "✂️ Split Manga File Now";
+    if (actionText) actionText.textContent = "⚡ Auto-Split Manga (~200MB Volumes)";
   } else {
     if (tabBtnConvert) tabBtnConvert.className = "flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-purple-600 text-white shadow transition-all";
     if (tabBtnSplit) tabBtnSplit.className = "flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-all";
@@ -991,17 +991,8 @@ async function executeFileSplitting() {
     }
   }
   const targetFormat = detectedFormat;
-  const splitSelect = document.getElementById("splitModeSelect")?.value || "parts_3";
-
-  let splitMode = "parts";
-  let splitValue = 3;
-  if (splitSelect.startsWith("parts_")) {
-    splitMode = "parts";
-    splitValue = parseInt(splitSelect.replace("parts_", ""), 10);
-  } else if (splitSelect.startsWith("pages_")) {
-    splitMode = "pages";
-    splitValue = parseInt(splitSelect.replace("pages_", ""), 10);
-  }
+  const splitMode = "auto_size";
+  const splitValue = 200; // Auto-detect and split ~200 MB per volume
 
   if (converterSelectedFiles.length === 0 && !converterSelectedFileId) {
     statusBox.className = "p-3.5 rounded-2xl text-xs bg-rose-950/40 border border-rose-500/40 text-rose-200";
@@ -1018,7 +1009,7 @@ async function executeFileSplitting() {
   statusBox.innerHTML = `
     <div class="flex items-center gap-2">
       <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-indigo-400"></i>
-      <span class="font-bold">Splitting file into lightweight volumes (${targetFormat.toUpperCase()})...</span>
+      <span class="font-bold">⚡ Auto-analyzing & splitting into ~200MB volumes (${targetFormat.toUpperCase()})...</span>
     </div>
   `;
   safeCreateIcons();
