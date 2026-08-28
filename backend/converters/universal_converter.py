@@ -209,10 +209,18 @@ class UniversalConverter:
             raise ValueError("No images found to split.")
 
         if split_mode in ("auto", "auto_size") or (split_mode == "parts" and split_value == 0):
-            # Dynamic Target Size (default: 20 MB for lightning-fast Send-to-Kindle & Email)
-            target_mb = int(split_value) if (split_value and int(split_value) > 0) else 20
-            # Set a 90% safety threshold so packaging overhead never exceeds the target MB
-            target_max_bytes = int(target_mb * 0.90 * 1024 * 1024)
+            # Dynamic Target Size (default: 25 MB for Email-Safe & Send-to-Kindle @kindle.com)
+            target_mb = int(split_value) if (split_value and int(split_value) > 0) else 25
+            
+            if target_mb <= 25:
+                # Strict 25 MB Email Attachment Hard Limit (Gmail, Outlook, Send-to-Kindle Email):
+                # Set threshold to 22.5 MB so the final packaged file is strictly <= 23.5 MB (never bounces)!
+                target_max_bytes = int(22.5 * 1024 * 1024)
+            elif target_mb <= 50:
+                target_max_bytes = int(46 * 1024 * 1024)
+            else:
+                # 200 MB Send-to-Kindle Web limit (180 MB safety threshold)
+                target_max_bytes = int(180 * 1024 * 1024)
             
             volume_chunks = []
             curr_chunk = []

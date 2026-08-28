@@ -725,22 +725,22 @@
         </div>
       </div>
 
-      <!-- TAB 2: SPLIT OPTIONS (SMART AUTO-SPLIT 20MB DEFAULT) -->
+      <!-- TAB 2: SPLIT OPTIONS (EMAIL-SAFE 25MB DEFAULT) -->
       <div id="splitTabSection" class="hidden space-y-4">
         <!-- Target Size Selector -->
         <div class="space-y-1.5">
           <label class="text-xs font-bold text-slate-300 flex items-center justify-between">
             <span class="flex items-center gap-1.5">
-              <i data-lucide="zap" class="w-3.5 h-3.5 text-indigo-400"></i>
+              <i data-lucide="mail" class="w-3.5 h-3.5 text-indigo-400"></i>
               <span>Target Volume Size:</span>
             </span>
-            <span id="splitSizeLabel" class="text-[10px] text-indigo-400 font-mono">⚡ 20 MB (Fast Send)</span>
+            <span id="splitSizeLabel" class="text-[10px] text-indigo-400 font-mono">📧 25 MB (Email-Safe)</span>
           </label>
           <div class="grid grid-cols-3 gap-2 bg-dark-surface p-1.5 rounded-2xl border border-dark-border">
             <label class="cursor-pointer text-center">
-              <input type="radio" name="splitSizeOption" value="20" checked class="peer sr-only" onchange="updateSplitSizeUI()">
+              <input type="radio" name="splitSizeOption" value="25" checked class="peer sr-only" onchange="updateSplitSizeUI()">
               <div class="py-2.5 px-2 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:shadow-md transition-all">
-                ⚡ 20 MB <span class="text-[10px] opacity-75 block font-normal">Ultra-Fast</span>
+                📧 25 MB <span class="text-[10px] opacity-75 block font-normal">Email-Safe</span>
               </div>
             </label>
             <label class="cursor-pointer text-center">
@@ -752,16 +752,16 @@
             <label class="cursor-pointer text-center">
               <input type="radio" name="splitSizeOption" value="200" class="peer sr-only" onchange="updateSplitSizeUI()">
               <div class="py-2.5 px-2 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:shadow-md transition-all">
-                📚 200 MB <span class="text-[10px] opacity-75 block font-normal">Max Volume</span>
+                📚 200 MB <span class="text-[10px] opacity-75 block font-normal">Send-to-Kindle Web</span>
               </div>
             </label>
           </div>
         </div>
 
         <div class="p-3.5 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 flex items-start gap-3">
-          <i data-lucide="info" class="w-4 h-4 text-indigo-400 shrink-0 mt-0.5"></i>
+          <i data-lucide="mail-check" class="w-4 h-4 text-indigo-400 shrink-0 mt-0.5"></i>
           <p class="text-[11px] text-slate-300 leading-relaxed">
-            <strong>20 MB volumes</strong> upload in 1–2 seconds and send instantly with Amazon Send to Kindle and Email!
+            <strong>25 MB Email-Safe volumes</strong> (strictly &le; 23 MB each) attach instantly in Gmail & Outlook and are guaranteed to send to your <strong>@kindle.com</strong> email address!
           </p>
         </div>
       </div>

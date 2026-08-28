@@ -968,10 +968,10 @@ function updateConverterFormatUI() {
 }
 
 function updateSplitSizeUI() {
-  const sizeMb = document.querySelector('input[name="splitSizeOption"]:checked')?.value || "20";
+  const sizeMb = document.querySelector('input[name="splitSizeOption"]:checked')?.value || "25";
   const label = document.getElementById("splitSizeLabel");
   const actionText = document.getElementById("modalActionBtnText");
-  if (label) label.textContent = `⚡ ${sizeMb} MB (${sizeMb === "20" ? "Fast Send" : sizeMb === "50" ? "Balanced" : "Max Volume"})`;
+  if (label) label.textContent = sizeMb === "25" ? "📧 25 MB (Email-Safe)" : sizeMb === "50" ? "📦 50 MB (Balanced)" : "📚 200 MB (Send-to-Kindle Web)";
   if (actionText && currentConverterTab === "split") {
     actionText.textContent = `⚡ Auto-Split Manga (${sizeMb}MB Volumes)`;
   }
@@ -1005,7 +1005,7 @@ async function executeFileSplitting() {
   }
   const targetFormat = detectedFormat;
   const splitMode = "auto_size";
-  const targetMb = parseInt(document.querySelector('input[name="splitSizeOption"]:checked')?.value || "20", 10);
+  const targetMb = parseInt(document.querySelector('input[name="splitSizeOption"]:checked')?.value || "25", 10);
   const splitValue = targetMb;
 
   if (converterSelectedFiles.length === 0 && !converterSelectedFileId) {
@@ -1023,7 +1023,7 @@ async function executeFileSplitting() {
   statusBox.innerHTML = `
     <div class="flex items-center gap-2">
       <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-indigo-400"></i>
-      <span class="font-bold">⚡ Splitting into lightweight ~${targetMb}MB volumes (${targetFormat.toUpperCase()})...</span>
+      <span class="font-bold">📧 Splitting into email-safe &le;${targetMb}MB volumes (${targetFormat.toUpperCase()})...</span>
     </div>
   `;
   safeCreateIcons();
