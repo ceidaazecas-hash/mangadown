@@ -746,46 +746,6 @@
             <option value="pages_300">📖 Split every 300 Pages</option>
           </select>
         </div>
-
-        <!-- Output Format for Split Parts -->
-        <div class="space-y-1.5">
-          <label class="text-xs font-bold text-slate-300 flex items-center justify-between">
-            <span>Volume Output Format:</span>
-            <span id="splitFormatLabel" class="text-[10px] text-indigo-400 font-mono">Output: EPUB</span>
-          </label>
-          <div class="grid grid-cols-5 gap-1.5 bg-dark-surface p-1.5 rounded-2xl border border-dark-border">
-            <label class="cursor-pointer text-center">
-              <input type="radio" name="splitTargetFormat" value="epub" checked class="peer sr-only" onchange="updateSplitFormatUI()">
-              <div class="py-2 px-1 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:shadow-md transition-all">
-                EPUB
-              </div>
-            </label>
-            <label class="cursor-pointer text-center">
-              <input type="radio" name="splitTargetFormat" value="pdf" class="peer sr-only" onchange="updateSplitFormatUI()">
-              <div class="py-2 px-1 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:shadow-md transition-all">
-                PDF
-              </div>
-            </label>
-            <label class="cursor-pointer text-center">
-              <input type="radio" name="splitTargetFormat" value="azw3" class="peer sr-only" onchange="updateSplitFormatUI()">
-              <div class="py-2 px-1 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:shadow-md transition-all">
-                AZW3
-              </div>
-            </label>
-            <label class="cursor-pointer text-center">
-              <input type="radio" name="splitTargetFormat" value="mobi" class="peer sr-only" onchange="updateSplitFormatUI()">
-              <div class="py-2 px-1 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:shadow-md transition-all">
-                MOBI
-              </div>
-            </label>
-            <label class="cursor-pointer text-center">
-              <input type="radio" name="splitTargetFormat" value="cbz" class="peer sr-only" onchange="updateSplitFormatUI()">
-              <div class="py-2 px-1 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:shadow-md transition-all">
-                CBZ
-              </div>
-            </label>
-          </div>
-        </div>
       </div>
 
       <!-- Status & Output Message Box -->

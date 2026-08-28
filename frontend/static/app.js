@@ -902,12 +902,6 @@ function switchConverterTab(tab) {
   safeCreateIcons();
 }
 
-function updateSplitFormatUI() {
-  const targetFmt = document.querySelector('input[name="splitTargetFormat"]:checked')?.value.toUpperCase() || "EPUB";
-  const label = document.getElementById("splitFormatLabel");
-  if (label) label.textContent = `Output: ${targetFmt}`;
-}
-
 function openConverterModal(tabOrFileId = 'convert', filename = null) {
   const modal = document.getElementById("converterModal");
   const statusBox = document.getElementById("converterStatusBox");
@@ -929,7 +923,6 @@ function openConverterModal(tabOrFileId = 'convert', filename = null) {
 
   switchConverterTab(initialTab);
   updateConverterFormatUI();
-  updateSplitFormatUI();
 
   if (modal) {
     modal.classList.remove("hidden");
@@ -982,7 +975,22 @@ async function executeModalAction() {
 async function executeFileSplitting() {
   const btn = document.getElementById("startConvertBtn");
   const statusBox = document.getElementById("converterStatusBox");
-  const targetFormat = document.querySelector('input[name="splitTargetFormat"]:checked')?.value || "epub";
+  
+  // Auto-detect format from the source file extension (No manual format picking needed!)
+  let detectedFormat = "epub";
+  if (converterSelectedFiles.length > 0) {
+    const ext = converterSelectedFiles[0].name.split('.').pop().toLowerCase();
+    if (["pdf", "epub", "azw3", "mobi", "cbz"].includes(ext)) {
+      detectedFormat = ext;
+    }
+  } else if (converterSelectedFileId) {
+    const fn = document.getElementById("converterFileName").textContent;
+    const ext = fn.split('.').pop().toLowerCase();
+    if (["pdf", "epub", "azw3", "mobi", "cbz"].includes(ext)) {
+      detectedFormat = ext;
+    }
+  }
+  const targetFormat = detectedFormat;
   const splitSelect = document.getElementById("splitModeSelect")?.value || "parts_3";
 
   let splitMode = "parts";
