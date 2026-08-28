@@ -70,13 +70,20 @@ class MOBIBuilder:
         record_size = 4096
         palmdoc_hdr = struct.pack('>HHIHHII', compression, 0, text_length, record_count, record_size, 0, 0)
 
-        # 3. Build EXTH Header
-        exth_records = []
-        author_bytes = author.encode('utf-8')
-        exth_records.append((100, author_bytes)) # Author
+        # 3. Build EXTH Header with Kindle OS indexing tags
+        import uuid
+        asin_id = f"B00{uuid.uuid4().hex[:7].upper()}".encode('ascii')
         title_bytes = manga_title.encode('utf-8')
-        exth_records.append((503, title_bytes)) # Full Title
-        exth_records.append((201, struct.pack('>I', 0))) # Cover image offset
+
+        exth_records = [
+            (100, author.encode('utf-8')),          # Author
+            (503, title_bytes),                     # Title
+            (501, b'EBOK'),                         # CDE Type: EBOK (Kindle eBook indexing tag!)
+            (113, asin_id),                         # ASIN / Unique Identifier for Kindle database
+            (201, struct.pack('>I', 0)),            # Cover Image Offset
+            (202, struct.pack('>I', 0)),            # Thumbnail Image Offset
+            (203, struct.pack('>I', 0)),            # Has Fake Cover (False)
+        ]
 
         exth_body = io.BytesIO()
         for tag, val in exth_records:
