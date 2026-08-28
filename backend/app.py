@@ -54,6 +54,19 @@ except Exception:
 # Mount static files
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
+import socket
+
+def get_local_ip() -> str:
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(0.5)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     return Response(status_code=204)
@@ -63,8 +76,27 @@ SERVER_BUILD_ID = str(int(time.time()))
 @app.get("/api/version")
 async def get_version():
     return {
-        "version": "1.2.0",
+        "version": "1.3.0",
         "build_id": SERVER_BUILD_ID
+    }
+
+@app.get("/kindle", response_class=HTMLResponse)
+async def kindle_hub_view():
+    kindle_html = os.path.join(FRONTEND_DIR, "kindle.html")
+    if os.path.exists(kindle_html):
+        with open(kindle_html, "r", encoding="utf-8") as f:
+            return HTMLResponse(f.read())
+    return HTMLResponse("<h1>Kindle Hub Ready</h1>")
+
+@app.get("/api/network/ip")
+async def get_network_ip():
+    local_ip = get_local_ip()
+    port = 8000
+    hub_url = f"http://{local_ip}:{port}/kindle"
+    return {
+        "local_ip": local_ip,
+        "port": port,
+        "hub_url": hub_url
     }
 
 tracker = ProgressTracker()

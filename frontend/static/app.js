@@ -1245,11 +1245,63 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+// Kindle Wi-Fi Wireless Hub
+let cachedHubUrl = "";
+
+async function openKindleHubModal() {
+  const modal = document.getElementById("kindleHubModal");
+  const urlText = document.getElementById("kindleHubUrlText");
+  const urlMini = document.getElementById("kindleHubUrlMini");
+  const previewBtn = document.getElementById("previewKindleHubBtn");
+
+  try {
+    const res = await fetch("/api/network/ip");
+    if (res.ok) {
+      const data = await res.json();
+      cachedHubUrl = data.hub_url;
+      if (urlText) urlText.textContent = data.hub_url;
+      if (urlMini) urlMini.textContent = data.hub_url;
+      if (previewBtn) previewBtn.href = data.hub_url;
+    }
+  } catch (e) {
+    console.error("Network IP lookup error:", e);
+  }
+
+  if (modal) {
+    modal.classList.remove("hidden");
+    lucide.createIcons();
+  }
+}
+
+function closeKindleHubModal() {
+  const modal = document.getElementById("kindleHubModal");
+  if (modal) modal.classList.add("hidden");
+}
+
+function copyKindleHubUrl() {
+  const url = cachedHubUrl || document.getElementById("kindleHubUrlText")?.textContent || "";
+  if (url) {
+    navigator.clipboard.writeText(url).then(() => {
+      const btn = document.getElementById("copyHubUrlBtn");
+      if (btn) {
+        const orig = btn.textContent;
+        btn.textContent = "Copied! ✓";
+        btn.classList.add("bg-emerald-300");
+        setTimeout(() => {
+          btn.textContent = orig;
+          btn.classList.remove("bg-emerald-300");
+        }, 2000);
+      }
+    });
+  }
+}
+
 // Global Keyboard Shortcuts
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     closeProgressModal();
     closeKindleModal();
+    closeKindleHubModal();
   }
 });
 

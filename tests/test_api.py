@@ -68,3 +68,16 @@ def test_kindle_upload():
     assert "file_id" in data
     assert data["filename"] == "my_manga.epub"
 
+def test_kindle_hub_view():
+    response = client.get("/kindle")
+    assert response.status_code == 200
+    assert "Kindle Hub" in response.text
+
+def test_network_ip():
+    response = client.get("/api/network/ip")
+    assert response.status_code == 200
+    data = response.json()
+    assert "local_ip" in data
+    assert "hub_url" in data
+
+
