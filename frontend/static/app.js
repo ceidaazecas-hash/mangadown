@@ -1253,5 +1253,37 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
+// Auto-Update & Live Reload Detection
+let currentAppBuildId = null;
+
+async function initAutoUpdateCheck() {
+  try {
+    const res = await fetch("/api/version", { cache: "no-store" });
+    if (res.ok) {
+      const data = await res.json();
+      currentAppBuildId = data.build_id;
+    }
+  } catch (e) {}
+
+  setInterval(async () => {
+    try {
+      const res = await fetch("/api/version", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+
+      if (currentAppBuildId && data.build_id && data.build_id !== currentAppBuildId) {
+        // Safe check: Only auto-reload if no download task is actively running
+        if (!activeTaskId && progressModal.classList.contains("hidden")) {
+          console.log("⚡ New MangaDrop update detected! Auto-refreshing...");
+          window.location.reload();
+        }
+      } else if (!currentAppBuildId) {
+        currentAppBuildId = data.build_id;
+      }
+    } catch (e) {}
+  }, 5000);
+}
+
 // Initial Load
 loadDownloadsHistory();
+initAutoUpdateCheck();

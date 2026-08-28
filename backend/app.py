@@ -58,6 +58,15 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 async def favicon():
     return Response(status_code=204)
 
+SERVER_BUILD_ID = str(int(time.time()))
+
+@app.get("/api/version")
+async def get_version():
+    return {
+        "version": "1.2.0",
+        "build_id": SERVER_BUILD_ID
+    }
+
 tracker = ProgressTracker()
 download_manager = DownloadManager(download_dir=DOWNLOADS_DIR)
 
