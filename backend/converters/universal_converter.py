@@ -184,3 +184,70 @@ class UniversalConverter:
             CBZBuilder.build_cbz(title, chapters_data, output_path, author="Converted Manga")
 
         return output_path
+
+    @classmethod
+    def split_and_convert(
+        cls,
+        input_file_path: str,
+        target_format: str,
+        output_dir: str,
+        split_mode: str = "parts",
+        split_value: int = 3,
+        custom_title: Optional[str] = None
+    ) -> List[str]:
+        import math
+        target_format = target_format.lower().strip().lstrip(".")
+        if target_format not in ("pdf", "epub", "mobi", "azw3", "azw", "cbz"):
+            raise ValueError(f"Unsupported target format: {target_format}")
+
+        title, images = cls.extract_images_from_file(input_file_path)
+        if custom_title:
+            title = custom_title
+
+        total_pages = len(images)
+        if total_pages == 0:
+            raise ValueError("No images found to split.")
+
+        if split_mode == "parts":
+            num_parts = max(1, int(split_value))
+            chunk_size = math.ceil(total_pages / num_parts)
+        else:
+            chunk_size = max(1, int(split_value))
+            num_parts = math.ceil(total_pages / chunk_size)
+
+        os.makedirs(output_dir, exist_ok=True)
+        created_paths = []
+
+        for part_idx in range(num_parts):
+            start = part_idx * chunk_size
+            end = min(start + chunk_size, total_pages)
+            if start >= total_pages:
+                break
+
+            part_images = images[start:end]
+            part_num = part_idx + 1
+            part_title = f"{title} (Part {part_num} of {num_parts})" if num_parts > 1 else title
+            out_filename = f"{part_title}.{target_format}"
+            output_path = os.path.join(output_dir, out_filename)
+
+            chapters_data = [
+                {
+                    "title": part_title,
+                    "chapter_display": f"Part {part_num}",
+                    "images": part_images
+                }
+            ]
+
+            if target_format == "pdf":
+                PDFBuilder.build_pdf(part_title, chapters_data, output_path, author="Converted Manga")
+            elif target_format == "epub":
+                EPUBBuilder.build_epub(part_title, chapters_data, output_path, author="Converted Manga")
+            elif target_format in ("mobi", "azw3", "azw"):
+                MOBIBuilder.build_mobi(part_title, chapters_data, output_path, author="Converted Manga")
+            elif target_format == "cbz":
+                CBZBuilder.build_cbz(part_title, chapters_data, output_path, author="Converted Manga")
+
+            created_paths.append(output_path)
+
+        return created_paths
+

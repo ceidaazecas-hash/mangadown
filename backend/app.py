@@ -450,10 +450,12 @@ async def convert_uploaded_file(
     target_format: str = Form("azw3")
 ):
     try:
-        temp_input_dir = os.path.join(DOWNLOADS_DIR, "temp_uploads")
+        temp_input_dir = "/tmp/manga_temp_uploads"
         os.makedirs(temp_input_dir, exist_ok=True)
         
-        safe_orig_name = sanitize_filename(file.filename or "uploaded_manga")
+        orig_raw_name = file.filename or "manga"
+        clean_title = os.path.splitext(orig_raw_name)[0]
+        safe_orig_name = sanitize_filename(orig_raw_name)
         input_path = os.path.join(temp_input_dir, f"{uuid.uuid4().hex}_{safe_orig_name}")
         
         async with aiofiles.open(input_path, "wb") as f_out:
@@ -466,7 +468,8 @@ async def convert_uploaded_file(
             UniversalConverter.convert,
             input_path,
             target_format,
-            DOWNLOADS_DIR
+            DOWNLOADS_DIR,
+            clean_title
         )
         
         try:
@@ -630,6 +633,68 @@ async def convert_batch_files(
 class ConvertExistingRequest(BaseModel):
     file_id: str
     target_format: str = "azw3"
+
+class SplitConvertRequest(BaseModel):
+    file_id: str
+    target_format: str = "epub"
+    split_mode: str = "parts"
+    split_value: int = 3
+
+@app.post("/api/convert/split")
+async def split_and_convert_file(req: SplitConvertRequest):
+    source_path = download_manager.get_file_path(req.file_id)
+    if not source_path or not os.path.exists(source_path):
+        raise HTTPException(status_code=404, detail="Source file not found or expired.")
+
+    try:
+        loop = asyncio.get_running_loop()
+        created_paths = await loop.run_in_executor(
+            None,
+            UniversalConverter.split_and_convert,
+            source_path,
+            req.target_format,
+            DOWNLOADS_DIR,
+            req.split_mode,
+            req.split_value
+        )
+
+        results = []
+        for p in created_paths:
+            fid = str(uuid.uuid4())
+            download_manager.register_file(fid, p)
+            fname = os.path.basename(p)
+            fsize = os.path.getsize(p)
+            size_fmt = format_file_size(fsize)
+
+            history_entry = {
+                "file_id": fid,
+                "manga_title": fname,
+                "filename": fname,
+                "format": req.target_format.upper(),
+                "bundle_mode": "split_volume",
+                "chapter_range": "Split Volume",
+                "chapter_count": 1,
+                "file_size": size_fmt,
+                "file_path": p,
+                "download_url": f"/api/files/{fid}",
+                "timestamp": time.time()
+            }
+            download_manager.history.insert(0, history_entry)
+            results.append({
+                "file_id": fid,
+                "filename": fname,
+                "file_size": size_fmt,
+                "download_url": f"/api/files/{fid}"
+            })
+
+        return {
+            "success": True,
+            "total_parts": len(results),
+            "target_format": req.target_format.upper(),
+            "items": results
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Split failed: {str(e)}")
 
 class BundleZipRequest(BaseModel):
     file_ids: List[str]

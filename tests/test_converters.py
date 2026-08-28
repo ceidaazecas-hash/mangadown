@@ -161,3 +161,25 @@ def test_universal_converter(tmp_path):
     assert os.path.exists(pdf_file)
     assert os.path.getsize(pdf_file) > 500
 
+    # 5. Convert PDF -> CBZ
+    cbz_file = UniversalConverter.convert(pdf_file, "cbz", str(tmp_path))
+    assert os.path.exists(cbz_file)
+    assert os.path.getsize(cbz_file) > 500
+
+def test_split_and_convert(tmp_path):
+    from backend.converters.universal_converter import UniversalConverter
+    from backend.converters.cbz_builder import CBZBuilder
+
+    # Create a 6-page CBZ
+    imgs = [create_dummy_image(800, 1200, "pink") for _ in range(6)]
+    chapters_data = [{"title": "Ch 1", "chapter_display": "1", "images": imgs}]
+    source_cbz = str(tmp_path / "long_manga.cbz")
+    CBZBuilder.build_cbz("Long Manga", chapters_data, source_cbz)
+
+    # Split into 3 parts (2 pages each)
+    split_dir = str(tmp_path / "splits")
+    parts = UniversalConverter.split_and_convert(source_cbz, "epub", split_dir, split_mode="parts", split_value=3)
+    assert len(parts) == 3
+    for p in parts:
+        assert os.path.exists(p)
+        assert p.endswith(".epub")

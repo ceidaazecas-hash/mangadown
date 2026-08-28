@@ -281,6 +281,78 @@ class DownloadManager:
                             manga.title, builder_data, final_output_path, manga.author or "Unknown"
                         )
 
+                elif bundle_mode == "volumes":
+                    # Split series into lightweight volumes (25 chapters per volume)
+                    import math
+                    vol_size = int(extra_options.get("volume_size", 25)) if extra_options else 25
+                    total_chs = len(chapters_data)
+                    num_vols = math.ceil(total_chs / vol_size)
+                    
+                    first_vol_file_id = None
+                    first_vol_fname = None
+                    first_vol_size_fmt = ""
+                    
+                    for v_idx in range(num_vols):
+                        v_start = v_idx * vol_size
+                        v_end = min(v_start + vol_size, total_chs)
+                        v_chapters = chapters_data[v_start:v_end]
+                        if not v_chapters:
+                            continue
+                            
+                        v_start_disp = v_chapters[0]["chapter_display"]
+                        v_end_disp = v_chapters[-1]["chapter_display"]
+                        v_range = f"{v_start_disp}" if len(v_chapters) == 1 else f"{v_start_disp}-{v_end_disp}"
+                        v_num = v_idx + 1
+                        v_fname = f"{safe_manga_title} - Vol {v_num:02d} ({sanitize_filename(v_range)}).{export_format}"
+                        v_out_path = os.path.join(self.download_dir, v_fname)
+                        v_fid = str(uuid.uuid4())
+                        self.register_file(v_fid, v_out_path)
+                        
+                        if v_idx == 0:
+                            first_vol_file_id = v_fid
+                            first_vol_fname = v_fname
+                            file_id = v_fid
+                            out_filename = v_fname
+                            final_output_path = v_out_path
+                            
+                        v_builder_data = [
+                            {
+                                "title": cd["title"],
+                                "chapter_display": cd["chapter_display"],
+                                "images": cd["downloaded_files"]
+                            }
+                            for cd in v_chapters if cd["downloaded_files"]
+                        ]
+                        
+                        if export_format == "pdf":
+                            await loop.run_in_executor(pool, PDFBuilder.build_pdf, f"{manga.title} Vol {v_num}", v_builder_data, v_out_path, manga.author)
+                        elif export_format == "epub":
+                            await loop.run_in_executor(pool, EPUBBuilder.build_epub, f"{manga.title} Vol {v_num}", v_builder_data, v_out_path, manga.author)
+                        elif export_format in ("mobi", "azw3", "azw"):
+                            await loop.run_in_executor(pool, MOBIBuilder.build_mobi, f"{manga.title} Vol {v_num}", v_builder_data, v_out_path, manga.author)
+                        elif export_format == "cbz":
+                            await loop.run_in_executor(pool, CBZBuilder.build_cbz, f"{manga.title} Vol {v_num}", v_builder_data, v_out_path, manga.author)
+                            
+                        v_size = os.path.getsize(v_out_path)
+                        v_size_fmt = format_file_size(v_size)
+                        
+                        if v_idx == 0:
+                            first_vol_size_fmt = v_size_fmt
+                            
+                        self.history.insert(0, {
+                            "file_id": v_fid,
+                            "manga_title": f"{manga.title} - Vol {v_num:02d}",
+                            "filename": v_fname,
+                            "format": export_format.upper(),
+                            "bundle_mode": "volumes",
+                            "chapter_range": f"Vol {v_num} ({v_range})",
+                            "chapter_count": len(v_chapters),
+                            "file_size": v_size_fmt,
+                            "file_path": v_out_path,
+                            "download_url": f"/api/files/{v_fid}",
+                            "timestamp": time.time()
+                        })
+
                 else:
                     out_filename = f"{safe_manga_title} ({range_str}) - {export_format.upper()}s.zip"
                     final_output_path = os.path.join(self.download_dir, out_filename)

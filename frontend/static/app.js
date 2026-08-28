@@ -669,8 +669,18 @@ function toggleSynopsis() {
 async function triggerDownload() {
   if (!currentManga || selectedChapterIds.size === 0) return;
 
-  const exportFormat = document.querySelector('input[name="exportFormat"]:checked')?.value || "pdf";
-  const bundleMode = document.getElementById("bundleMode").value;
+  const rawBundleMode = document.getElementById("bundleMode").value;
+  let bundleMode = rawBundleMode;
+  let extraOptions = {};
+
+  if (rawBundleMode === "volumes_25") {
+    bundleMode = "volumes";
+    extraOptions = { volume_size: 25 };
+  } else if (rawBundleMode === "volumes_50") {
+    bundleMode = "volumes";
+    extraOptions = { volume_size: 50 };
+  }
+
   const dataSaver = document.getElementById("dataSaver").value === "true";
 
   const payload = {
@@ -678,6 +688,7 @@ async function triggerDownload() {
     selected_chapter_ids: Array.from(selectedChapterIds),
     format: exportFormat,
     bundle_mode: bundleMode,
+    extra_options: extraOptions,
     data_saver: dataSaver
   };
 
@@ -923,6 +934,17 @@ async function executeFileConversion() {
   const btn = document.getElementById("startConvertBtn");
   const statusBox = document.getElementById("converterStatusBox");
   const targetFormat = document.querySelector('input[name="convTargetFormat"]:checked')?.value || "azw3";
+  const splitSelect = document.getElementById("convSplitSelect")?.value || "none";
+
+  let splitMode = null;
+  let splitValue = 0;
+  if (splitSelect.startsWith("parts_")) {
+    splitMode = "parts";
+    splitValue = parseInt(splitSelect.replace("parts_", ""), 10);
+  } else if (splitSelect.startsWith("pages_")) {
+    splitMode = "pages";
+    splitValue = parseInt(splitSelect.replace("pages_", ""), 10);
+  }
 
   if (converterSelectedFiles.length === 0 && !converterSelectedFileId) {
     statusBox.className = "p-3.5 rounded-2xl text-xs bg-rose-950/40 border border-rose-500/40 text-rose-200";
@@ -948,11 +970,11 @@ async function executeFileConversion() {
         const currentNum = i + 1;
         const progressPct = Math.round(((i) / totalFiles) * 100);
 
-        btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Converting (${currentNum}/${totalFiles})...</span>`;
+        btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>${splitMode ? "Splitting" : "Converting"} (${currentNum}/${totalFiles})...</span>`;
         statusBox.innerHTML = `
           <div class="space-y-2">
             <div class="flex justify-between items-center text-xs font-bold text-purple-300">
-              <span class="truncate">Converting (${currentNum}/${totalFiles}): ${escapeHtml(file.name)}...</span>
+              <span class="truncate">${splitMode ? "Splitting" : "Converting"} (${currentNum}/${totalFiles}): ${escapeHtml(file.name)}...</span>
               <span class="font-mono">${progressPct}%</span>
             </div>
             <div class="w-full bg-dark-surface rounded-full h-2 overflow-hidden border border-purple-500/30">
@@ -976,33 +998,74 @@ async function executeFileConversion() {
           throw new Error(data.detail || `Conversion failed for ${file.name}.`);
         }
 
-        convertedItems.push(data);
+        if (splitMode) {
+          // Now split this converted file into the requested volume parts
+          const splitRes = await fetch("/api/convert/split", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              file_id: data.file_id,
+              target_format: targetFormat,
+              split_mode: splitMode,
+              split_value: splitValue
+            })
+          });
+          const splitData = await splitRes.json();
+          if (splitRes.ok && splitData.items) {
+            convertedItems.push(...splitData.items);
+          } else {
+            convertedItems.push(data);
+          }
+        } else {
+          convertedItems.push(data);
+        }
       }
 
     } else if (converterSelectedFileId) {
-      btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Converting...</span>`;
+      btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>${splitMode ? "Splitting" : "Converting"}...</span>`;
       statusBox.innerHTML = `
         <div class="flex items-center gap-2">
           <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-purple-400"></i>
-          <span class="font-bold">Converting file to ${targetFormat.toUpperCase()}...</span>
+          <span class="font-bold">${splitMode ? "Splitting into volumes" : "Converting file"} to ${targetFormat.toUpperCase()}...</span>
         </div>
       `;
       safeCreateIcons();
 
-      const res = await fetch("/api/convert/existing", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          file_id: converterSelectedFileId,
-          target_format: targetFormat
-        })
-      });
+      if (splitMode) {
+        const res = await fetch("/api/convert/split", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            file_id: converterSelectedFileId,
+            target_format: targetFormat,
+            split_mode: splitMode,
+            split_value: splitValue
+          })
+        });
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.detail || "Conversion failed.");
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.detail || "Splitting failed.");
+        }
+        if (data.items) {
+          convertedItems.push(...data.items);
+        }
+      } else {
+        const res = await fetch("/api/convert/existing", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            file_id: converterSelectedFileId,
+            target_format: targetFormat
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.detail || "Conversion failed.");
+        }
+        convertedItems.push(data);
       }
-      convertedItems.push(data);
     }
 
     // Done Converting!
