@@ -5,37 +5,91 @@ import uuid
 import html
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Dict, Any, Optional, Tuple
-from backend.utils.image_utils import prepare_image_for_pdf, optimize_for_kindle, slice_webtoon_image
+from PIL import Image, ImageOps
 
-def _process_epub_page(item: Tuple[int, str, bool, Any, bool]) -> Optional[Dict[str, Any]]:
-    global_page_counter, ch_title, is_chapter_start, raw_bytes, kindle_opt = item
-    try:
-        if kindle_opt:
-            jpeg_bytes, w, h = optimize_for_kindle(raw_bytes)
-        else:
-            with Image.open(io.BytesIO(raw_bytes)) as pil_img:
-                w, h = pil_img.size
+def _process_chapter_images_worker(item: Tuple[int, str, List[Any], bool]) -> List[Dict[str, Any]]:
+    ch_idx, ch_title, ch_images, kindle_opt = item
+    results = []
 
-            processed_img = prepare_image_for_pdf(raw_bytes)
-            out_io = io.BytesIO()
-            processed_img.save(out_io, format="JPEG", quality=90, optimize=True)
-            jpeg_bytes = out_io.getvalue()
-            processed_img.close()
+    for img_idx, img_item in enumerate(ch_images):
+        try:
+            if isinstance(img_item, (bytes, bytearray)):
+                raw_bytes = bytes(img_item)
+            elif isinstance(img_item, str) and os.path.exists(img_item):
+                with open(img_item, "rb") as f:
+                    raw_bytes = f.read()
+            else:
+                continue
 
-        img_filename = f"img_{global_page_counter:04d}.jpg"
+            with Image.open(io.BytesIO(raw_bytes)) as img:
+                img = ImageOps.exif_transpose(img)
+                w, h = img.size
+                ratio = h / w
 
-        return {
-            "page_num": global_page_counter,
-            "chapter_title": ch_title,
-            "is_chapter_start": is_chapter_start,
-            "img_filename": img_filename,
-            "xhtml_filename": f"page_{global_page_counter:04d}.xhtml",
-            "width": w,
-            "height": h,
-            "bytes": jpeg_bytes
-        }
-    except Exception:
-        return None
+                if ratio <= 1.8:
+                    # Standard Manga Page: Fast single-pass prepare
+                    out_io = io.BytesIO()
+                    if kindle_opt and (w > 1440 or h > 1920):
+                        img.thumbnail((1440, 1920), Image.Resampling.BILINEAR)
+                        w, h = img.size
+
+                    if img.mode != "RGB":
+                        img = img.convert("RGB")
+
+                    img.save(out_io, format="JPEG", quality=86, optimize=False)
+                    jpeg_bytes = out_io.getvalue()
+                    results.append({
+                        "ch_idx": ch_idx,
+                        "img_idx": img_idx,
+                        "slice_idx": 0,
+                        "chapter_title": ch_title,
+                        "is_chapter_start": (img_idx == 0),
+                        "width": w,
+                        "height": h,
+                        "bytes": jpeg_bytes
+                    })
+
+                else:
+                    # Webtoon Long Strip: Auto-slice into full-screen standard pages
+                    slice_h = int(w * 1.45)
+                    y = 0
+                    slice_count = 0
+                    while y < h:
+                        end_y = min(y + slice_h, h)
+                        if (h - end_y) < (slice_h * 0.22) and end_y < h:
+                            end_y = h
+
+                        crop = img.crop((0, y, w, end_y))
+                        cw, ch_h = crop.size
+
+                        if kindle_opt and (cw > 1440 or ch_h > 1920):
+                            crop.thumbnail((1440, 1920), Image.Resampling.BILINEAR)
+                            cw, ch_h = crop.size
+
+                        if crop.mode != "RGB":
+                            crop = crop.convert("RGB")
+
+                        out_io = io.BytesIO()
+                        crop.save(out_io, format="JPEG", quality=86, optimize=False)
+                        jpeg_bytes = out_io.getvalue()
+
+                        results.append({
+                            "ch_idx": ch_idx,
+                            "img_idx": img_idx,
+                            "slice_idx": slice_count,
+                            "chapter_title": ch_title,
+                            "is_chapter_start": (img_idx == 0 and slice_count == 0),
+                            "width": cw,
+                            "height": ch_h,
+                            "bytes": jpeg_bytes
+                        })
+                        slice_count += 1
+                        y = end_y
+
+        except Exception:
+            continue
+
+    return results
 
 class EPUBBuilder:
     @staticmethod
@@ -52,40 +106,36 @@ class EPUBBuilder:
         safe_title = html.escape(manga_title)
         safe_author = html.escape(author or "Unknown Author")
 
-        tasks = []
-        global_page_counter = 1
-
+        chapter_tasks = []
         for ch_idx, ch in enumerate(chapters_data):
             ch_title = ch.get("title") or ch.get("chapter_display") or f"Chapter {ch_idx+1}"
             ch_images = ch.get("images", [])
-            
-            for img_idx, img_item in enumerate(ch_images):
-                if isinstance(img_item, (bytes, bytearray)):
-                    raw_bytes = bytes(img_item)
-                elif isinstance(img_item, str) and os.path.exists(img_item):
-                    with open(img_item, "rb") as f:
-                        raw_bytes = f.read()
-                else:
-                    continue
+            if ch_images:
+                chapter_tasks.append((ch_idx, ch_title, ch_images, kindle_optimize))
 
-                # Auto-slice continuous webtoon strips into full-screen reading pages
-                page_slices = slice_webtoon_image(raw_bytes)
-                for s_idx, s_bytes in enumerate(page_slices):
-                    is_start = (img_idx == 0 and s_idx == 0)
-                    tasks.append((global_page_counter, ch_title, is_start, s_bytes, kindle_optimize))
-                    global_page_counter += 1
+        if not chapter_tasks:
+            raise ValueError("No chapters or pages found to build EPUB.")
 
-        if not tasks:
-            raise ValueError("No pages found to build EPUB.")
+        # Multi-core parallel image processing & slicing
+        num_threads = min(32, max(8, (os.cpu_count() or 4) * 2))
+        with ThreadPoolExecutor(max_workers=num_threads) as pool:
+            nested_pages = list(pool.map(_process_chapter_images_worker, chapter_tasks))
 
-        with ThreadPoolExecutor(max_workers=max(4, os.cpu_count() or 4)) as pool:
-            pages_info = list(filter(None, pool.map(_process_epub_page, tasks)))
+        # Flatten & sort in exact chapter order
+        pages_info = []
+        for ch_pages in nested_pages:
+            pages_info.extend(ch_pages)
 
         if not pages_info:
             raise ValueError("No valid pages found to build EPUB.")
 
-        pages_info.sort(key=lambda x: x["page_num"])
+        # Assign global page counters & filenames
+        for idx, p in enumerate(pages_info, start=1):
+            p["page_num"] = idx
+            p["img_filename"] = f"img_{idx:04d}.jpg"
+            p["xhtml_filename"] = f"page_{idx:04d}.xhtml"
 
+        # Build EPUB Archive
         with zipfile.ZipFile(output_path, "w") as epub:
             epub.writestr("mimetype", "application/epub+zip", compress_type=zipfile.ZIP_STORED)
 
@@ -124,7 +174,8 @@ class EPUBBuilder:
   </navPoint>""")
                     nav_play_order += 1
 
-                epub.writestr(f"OEBPS/images/{p['img_filename']}", p["bytes"], compress_type=zipfile.ZIP_DEFLATED)
+                # INSTANT write: JPEGs are already compressed, store directly without re-deflating!
+                epub.writestr(f"OEBPS/images/{p['img_filename']}", p["bytes"], compress_type=zipfile.ZIP_STORED)
                 
                 page_html = f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html>
@@ -146,7 +197,7 @@ class EPUBBuilder:
   </div>
 </body>
 </html>"""
-                epub.writestr(f"OEBPS/xhtml/{p['xhtml_filename']}", page_html, compress_type=zipfile.ZIP_DEFLATED)
+                epub.writestr(f"OEBPS/xhtml/{p['xhtml_filename']}", page_html, compress_type=zipfile.ZIP_STORED)
 
             content_opf = f"""<?xml version="1.0" encoding="UTF-8"?>
 <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="pub-id" prefix="rendition: http://www.idpf.org/vocab/rendition/#">
