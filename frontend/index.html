@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MangaDrop — Scan & Download Manga to PDF / EPUB</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+            heading: ['Outfit', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              200: '#c7d2fe',
+              300: '#a5b4fc',
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3',
+              900: '#312e81',
+              accent: '#06b6d4',
+              pink: '#ec4899',
+            },
+            dark: {
+              bg: '#090b10',
+              surface: '#111420',
+              card: '#161a29',
+              border: '#23293f',
+              muted: '#8e98b0'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body class="bg-dark-bg text-slate-100 min-h-screen flex flex-col font-sans selection:bg-brand-500 selection:text-white">
+
+  <!-- Background Glowing Orbs -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+    <div class="absolute -top-40 left-1/4 w-96 h-96 bg-brand-600/15 rounded-full blur-3xl"></div>
+    <div class="absolute top-1/3 -right-20 w-80 h-80 bg-brand-accent/10 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-10 left-1/3 w-[500px] h-[500px] bg-brand-pink/10 rounded-full blur-3xl"></div>
+  </div>
+
+  <!-- Header / Navigation -->
+  <header class="sticky top-0 z-40 backdrop-blur-xl bg-dark-bg/80 border-b border-dark-border/60 transition-all">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3 cursor-pointer" onclick="resetToHome()">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-brand-accent flex items-center justify-center shadow-lg shadow-brand-500/25">
+          <i data-lucide="book-open" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <span class="text-xl font-extrabold font-heading tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-brand-300">
+            MangaDrop
+          </span>
+          <span class="hidden sm:inline-block ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20">
+            PDF • EPUB • CBZ
+          </span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button onclick="triggerKindleUploadPicker()" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-sm font-bold text-amber-300 transition-all shadow-sm">
+          <i data-lucide="tablet" class="w-4 h-4 text-amber-400"></i>
+          <span>Send File to Kindle</span>
+        </button>
+
+        <button id="historyToggleBtn" onclick="toggleHistoryDrawer()" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-dark-surface hover:bg-dark-card border border-dark-border/80 text-sm font-medium text-slate-300 hover:text-white transition-all shadow-sm">
+          <i data-lucide="clock" class="w-4 h-4 text-brand-400"></i>
+          <span>Downloads</span>
+          <span id="historyBadge" class="hidden ml-1 px-1.5 py-0.2 text-xs font-bold rounded-full bg-brand-500 text-white">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+
+    <!-- Hero / URL Input Section -->
+    <section id="heroSection" class="text-center space-y-8 max-w-4xl mx-auto pt-6">
+      <div class="space-y-4">
+        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold font-heading tracking-tight text-white leading-tight">
+          Download Any Manga to <br/>
+          <span class="bg-clip-text text-transparent bg-gradient-to-r from-brand-400 via-brand-pink to-brand-accent">
+            PDF, EPUB & Kindle
+          </span>
+        </h1>
+        <p class="text-slate-400 text-sm sm:text-base max-w-xl mx-auto">
+          Paste any manga link or search by title. Choose any chapter range and export formatted books with dynamic page scaling and table of contents.
+        </p>
+      </div>
+
+      <!-- Main Input Bar -->
+      <div class="relative max-w-2xl mx-auto">
+        <div class="relative flex items-center rounded-2xl bg-dark-surface/90 border-2 border-dark-border focus-within:border-brand-500 focus-within:ring-4 focus-within:ring-brand-500/15 transition-all shadow-2xl backdrop-blur-md">
+          <div class="pl-4 text-slate-400">
+            <i data-lucide="link-2" class="w-5 h-5 text-brand-400" id="searchIcon"></i>
+          </div>
+
+          <input 
+            type="text" 
+            id="urlInput" 
+            placeholder="Paste manga link (e.g. MangaDex, Manganato) or type to search..." 
+            class="w-full py-4 pl-3 pr-28 bg-transparent text-sm sm:text-base text-white placeholder:text-slate-500 focus:outline-none"
+            autocomplete="off"
+          />
+
+          <div class="absolute right-2 flex items-center gap-1.5">
+            <button 
+              id="pasteBtn" 
+              type="button" 
+              onclick="pasteFromClipboard()" 
+              title="Paste from Clipboard"
+              class="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-dark-card transition-colors"
+            >
+              <i data-lucide="clipboard-paste" class="w-4 h-4"></i>
+            </button>
+
+            <button 
+              id="scanBtn" 
+              type="button" 
+              onclick="handleScanOrSearch()" 
+              class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white font-semibold text-sm shadow-md shadow-brand-500/20 active:scale-95 transition-all"
+            >
+              <span id="scanBtnText">Scan</span>
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Search Suggestions Dropdown -->
+        <div id="searchDropdown" class="hidden absolute left-0 right-0 top-full mt-2 bg-dark-surface/95 border border-dark-border rounded-2xl shadow-2xl backdrop-blur-xl z-50 overflow-hidden text-left divide-y divide-dark-border/50 max-h-96 overflow-y-auto">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Quick Preset Suggestions -->
+      <div class="flex flex-wrap items-center justify-center gap-2 pt-1 text-xs text-slate-400">
+        <span class="text-slate-500 font-medium">Try popular:</span>
+        <button onclick="quickSelectManga('One Piece')" class="px-2.5 py-1 rounded-lg bg-dark-card hover:bg-dark-border text-slate-300 hover:text-white transition-colors border border-dark-border/60">
+          🏴‍☠️ One Piece
+        </button>
+        <button onclick="quickSelectManga('Solo Leveling')" class="px-2.5 py-1 rounded-lg bg-dark-card hover:bg-dark-border text-slate-300 hover:text-white transition-colors border border-dark-border/60">
+          🗡️ Solo Leveling
+        </button>
+        <button onclick="quickSelectManga('Sousou no Frieren')" class="px-2.5 py-1 rounded-lg bg-dark-card hover:bg-dark-border text-slate-300 hover:text-white transition-colors border border-dark-border/60">
+          🪄 Frieren
+        </button>
+        <button onclick="quickSelectManga('Chainsaw Man')" class="px-2.5 py-1 rounded-lg bg-dark-card hover:bg-dark-border text-slate-300 hover:text-white transition-colors border border-dark-border/60">
+          🩸 Chainsaw Man
+        </button>
+        <button onclick="quickSelectManga('Jujutsu Kaisen')" class="px-2.5 py-1 rounded-lg bg-dark-card hover:bg-dark-border text-slate-300 hover:text-white transition-colors border border-dark-border/60">
+          🤞 Jujutsu Kaisen
+        </button>
+      </div>
+
+      <!-- Standalone Kindle File Upload Dropzone (No Manga Download Required!) -->
+      <div 
+        id="kindleUploadDropzone" 
+        class="max-w-2xl mx-auto mt-6 p-6 rounded-3xl bg-dark-card/90 border-2 border-dashed border-amber-500/30 hover:border-amber-500/80 transition-all text-center space-y-3 relative group cursor-pointer shadow-xl backdrop-blur-sm"
+        onclick="triggerKindleUploadPicker()"
+      >
+        <input type="file" id="standaloneFileInput" accept=".epub,.pdf,.cbz,.zip" class="hidden" onchange="handleStandaloneFileUpload(event)" />
+        
+        <div class="space-y-2">
+          <div class="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400 group-hover:scale-110 transition-transform">
+            <i data-lucide="upload-cloud" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <p class="text-sm sm:text-base font-bold text-white">Have your own manga file? Drop it here to Send to Kindle!</p>
+            <p class="text-xs text-slate-400">Drag & drop any EPUB, PDF, CBZ, or ZIP file from your computer</p>
+          </div>
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px] font-semibold">
+            <i data-lucide="zap" class="w-3 h-3 text-amber-400"></i>
+            <span>Instant E-Ink Optimization & Volume Splitting for nit.ratha01_t9Ucaw@kindle.com</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Loading Skeleton / Spinner State -->
+    <div id="scanLoading" class="hidden max-w-4xl mx-auto py-12 text-center space-y-4">
+      <div class="inline-flex p-4 rounded-2xl bg-dark-card border border-dark-border animate-pulse">
+        <i data-lucide="loader-2" class="w-8 h-8 text-brand-400 animate-spin"></i>
+      </div>
+      <div class="space-y-1">
+        <h3 class="text-lg font-bold text-white">Scanning Manga Source...</h3>
+        <p class="text-sm text-slate-400">Extracting chapters, titles, and metadata from server</p>
+      </div>
+    </div>
+
+    <!-- Error Alert Container -->
+    <div id="errorAlert" class="hidden max-w-3xl mx-auto p-4 rounded-2xl bg-rose-950/40 border border-rose-800/60 text-rose-200 flex items-start gap-3 shadow-lg">
+      <i data-lucide="alert-circle" class="w-5 h-5 text-rose-400 shrink-0 mt-0.5"></i>
+      <div class="space-y-1 text-sm flex-1">
+        <p class="font-bold text-rose-300" id="errorTitle">Scan Failed</p>
+        <p class="text-rose-200/90 text-xs sm:text-sm" id="errorMessage">Unable to fetch manga info. Please check the URL or try searching by title.</p>
+      </div>
+      <button onclick="hideError()" class="text-rose-400 hover:text-rose-200 p-1">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Manga Content View (Shown after scan) -->
+    <div id="mangaView" class="hidden space-y-8 animate-fade-in">
+      
+      <!-- Manga Info Header Card -->
+      <section class="relative rounded-3xl bg-dark-card/90 border border-dark-border/80 p-6 sm:p-8 shadow-2xl overflow-hidden backdrop-blur-md">
+        <!-- Backdrop Glow Image -->
+        <div id="mangaBackdrop" class="absolute inset-0 bg-cover bg-center opacity-10 blur-2xl -z-10 scale-110"></div>
+        
+        <div class="flex flex-col md:flex-row gap-6 sm:gap-8 items-start">
+          <!-- Cover Art -->
+          <div class="w-full sm:w-52 shrink-0 aspect-[2/3] rounded-2xl overflow-hidden bg-dark-surface border-2 border-dark-border/80 shadow-2xl relative group">
+            <img id="mangaCover" src="" alt="Manga Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+            <div id="mangaStatusBadge" class="absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-bold bg-dark-bg/80 backdrop-blur-md text-emerald-400 border border-emerald-500/30">
+              Ongoing
+            </div>
+          </div>
+
+          <!-- Metadata & Details -->
+          <div class="flex-1 space-y-4">
+            <div class="space-y-2">
+              <div class="flex flex-wrap items-center gap-2">
+                <span id="mangaSourceBadge" class="px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wider bg-brand-500/20 text-brand-300 border border-brand-500/30">
+                  MangaDex
+                </span>
+                <span id="mangaLanguageBadge" class="px-2.5 py-0.5 rounded-md text-xs font-medium bg-dark-surface text-slate-300 border border-dark-border">
+                  English
+                </span>
+                <span id="mangaTotalChapters" class="px-2.5 py-0.5 rounded-md text-xs font-medium bg-dark-surface text-slate-300 border border-dark-border">
+                  0 Chapters
+                </span>
+              </div>
+
+              <h2 id="mangaTitle" class="text-2xl sm:text-4xl font-extrabold font-heading text-white tracking-tight">
+                Manga Title
+              </h2>
+
+              <p id="mangaAuthor" class="text-sm font-medium text-slate-400 flex items-center gap-1.5">
+                <i data-lucide="user" class="w-3.5 h-3.5 text-brand-400"></i>
+                <span>Author Name</span>
+              </p>
+            </div>
+
+            <!-- Genres Tags -->
+            <div id="mangaGenres" class="flex flex-wrap gap-1.5">
+              <!-- Genre tags -->
+            </div>
+
+            <!-- Description -->
+            <div class="relative">
+              <p id="mangaSynopsis" class="text-slate-300 text-sm leading-relaxed line-clamp-3 transition-all duration-300">
+                Synopsis text...
+              </p>
+              <button id="toggleSynopsisBtn" onclick="toggleSynopsis()" class="text-xs font-semibold text-brand-400 hover:text-brand-300 mt-1 inline-flex items-center gap-1">
+                <span>Read More</span>
+                <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Download Config & Chapter Range Controls -->
+      <section class="rounded-3xl bg-dark-surface/90 border border-dark-border/80 p-6 sm:p-8 space-y-6 shadow-xl backdrop-blur-md">
+        <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-4 border-b border-dark-border/60">
+          <div>
+            <h3 class="text-lg font-bold font-heading text-white flex items-center gap-2">
+              <i data-lucide="sliders-horizontal" class="w-5 h-5 text-brand-400"></i>
+              <span>Download Configuration</span>
+            </h3>
+            <p class="text-xs text-slate-400">Customize output format, range, and bundling preferences</p>
+          </div>
+
+          <!-- Format Selector Pills -->
+          <div class="flex items-center gap-2 bg-dark-card p-1.5 rounded-2xl border border-dark-border">
+            <span class="text-xs font-semibold px-2 text-slate-400">Format:</span>
+            <label class="cursor-pointer">
+              <input type="radio" name="exportFormat" value="pdf" checked class="peer sr-only" onchange="updateFormatUI()">
+              <div class="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-brand-600 peer-checked:text-white peer-checked:shadow-md transition-all flex items-center gap-1.5">
+                <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                <span>PDF</span>
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="exportFormat" value="epub" class="peer sr-only" onchange="updateFormatUI()">
+              <div class="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-brand-600 peer-checked:text-white peer-checked:shadow-md transition-all flex items-center gap-1.5">
+                <i data-lucide="book" class="w-3.5 h-3.5"></i>
+                <span>EPUB</span>
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="exportFormat" value="cbz" class="peer sr-only" onchange="updateFormatUI()">
+              <div class="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-400 peer-checked:bg-brand-600 peer-checked:text-white peer-checked:shadow-md transition-all flex items-center gap-1.5">
+                <i data-lucide="archive" class="w-3.5 h-3.5"></i>
+                <span>CBZ</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Scanlation Group Filter & Deduplication Control Bar -->
+        <div class="p-3.5 rounded-2xl bg-dark-card/60 border border-dark-border/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div class="flex items-center gap-2 flex-1 min-w-[240px]">
+            <i data-lucide="users" class="w-4 h-4 text-brand-400 shrink-0"></i>
+            <span class="font-bold text-slate-300 shrink-0">Translation Group:</span>
+            <div class="relative flex-1">
+              <select 
+                id="scanGroupSelect" 
+                onchange="handleGroupFilterChange()"
+                class="w-full appearance-none pl-3 pr-8 py-1.5 rounded-xl bg-dark-surface border border-dark-border text-xs font-semibold text-white focus:outline-none focus:border-brand-500 cursor-pointer truncate"
+              >
+                <option value="dedupe">✨ Recommended Group (1 version per chapter)</option>
+                <option value="all">Show All Versions & Groups</option>
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+                <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button 
+              type="button" 
+              id="dedupeToggleBtn" 
+              onclick="toggleDeduplication()"
+              class="px-3 py-1.5 rounded-xl bg-brand-500/20 text-brand-300 border border-brand-500/40 font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+            >
+              <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+              <span id="dedupeToggleText">Deduplicate (1 per Ch.)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Range Selection Controls with Chapter Dropdowns -->
+        <div class="space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
+            
+            <!-- From Chapter Dropdown & To Chapter Dropdown -->
+            <div class="md:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+              
+              <!-- From Chapter Dropdown -->
+              <div class="space-y-1.5">
+                <label class="text-xs font-bold text-slate-300 flex items-center justify-between">
+                  <span class="flex items-center gap-1.5">
+                    <i data-lucide="chevrons-right" class="w-3.5 h-3.5 text-brand-400"></i>
+                    <span>From Chapter</span>
+                  </span>
+                  <span id="rangeFromBadge" class="text-[10px] font-mono text-brand-300"></span>
+                </label>
+                <div class="relative">
+                  <select 
+                    id="selectFromChapter" 
+                    onchange="handleDropdownRangeChange()"
+                    class="w-full appearance-none pl-3.5 pr-9 py-2.5 rounded-xl bg-dark-card border border-dark-border text-xs sm:text-sm font-semibold text-white focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 truncate cursor-pointer transition-all shadow-sm"
+                  >
+                    <option value="">Select starting chapter...</option>
+                  </select>
+                  <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
+                    <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                  </div>
+                </div>
+              </div>
+
+              <!-- To Chapter Dropdown -->
+              <div class="space-y-1.5">
+                <label class="text-xs font-bold text-slate-300 flex items-center justify-between">
+                  <span class="flex items-center gap-1.5">
+                    <i data-lucide="chevrons-right" class="w-3.5 h-3.5 text-brand-accent"></i>
+                    <span>To Chapter</span>
+                  </span>
+                  <span id="rangeToBadge" class="text-[10px] font-mono text-brand-accent"></span>
+                </label>
+                <div class="relative">
+                  <select 
+                    id="selectToChapter" 
+                    onchange="handleDropdownRangeChange()"
+                    class="w-full appearance-none pl-3.5 pr-9 py-2.5 rounded-xl bg-dark-card border border-dark-border text-xs sm:text-sm font-semibold text-white focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 truncate cursor-pointer transition-all shadow-sm"
+                  >
+                    <option value="">Select ending chapter...</option>
+                  </select>
+                  <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
+                    <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Quick Presets Toolbar -->
+            <div class="md:col-span-4 flex flex-wrap items-center gap-1.5 md:justify-end">
+              <button type="button" onclick="selectPreset('all')" class="px-3 py-2 rounded-xl bg-dark-card hover:bg-dark-border text-xs font-bold text-slate-200 hover:text-white border border-dark-border/80 transition-all shadow-sm active:scale-95">
+                All Chapters
+              </button>
+              <button type="button" onclick="selectPreset('first5')" class="px-2.5 py-2 rounded-xl bg-dark-card hover:bg-dark-border text-xs font-medium text-slate-300 hover:text-white border border-dark-border/80 transition-all">
+                First 5
+              </button>
+              <button type="button" onclick="selectPreset('first10')" class="px-2.5 py-2 rounded-xl bg-dark-card hover:bg-dark-border text-xs font-medium text-slate-300 hover:text-white border border-dark-border/80 transition-all">
+                First 10
+              </button>
+              <button type="button" onclick="selectPreset('latest10')" class="px-2.5 py-2 rounded-xl bg-dark-card hover:bg-dark-border text-xs font-medium text-slate-300 hover:text-white border border-dark-border/80 transition-all">
+                Latest 10
+              </button>
+              <button type="button" onclick="selectPreset('none')" class="px-2.5 py-2 rounded-xl bg-dark-card hover:bg-rose-950/40 text-xs font-semibold text-rose-400 hover:text-rose-300 border border-dark-border/80 transition-all">
+                Clear
+              </button>
+            </div>
+          </div>
+
+          <!-- Dynamic Batch Range Buttons (e.g. Ch 1-20, Ch 21-40) -->
+          <div id="dynamicBatchRanges" class="flex flex-wrap items-center gap-1.5 pt-1 text-xs">
+            <!-- Populated dynamically by app.js -->
+          </div>
+        </div>
+
+        <!-- Additional Preferences: Bundling, Language, Quality -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-dark-border/40 text-xs">
+          <!-- Bundling Mode -->
+          <div class="space-y-1">
+            <label class="font-medium text-slate-400">Bundling Mode</label>
+            <select id="bundleMode" class="w-full px-3 py-2 rounded-xl bg-dark-card border border-dark-border text-slate-200 focus:outline-none focus:border-brand-500">
+              <option value="single">📚 Single Combined Book (with bookmarks)</option>
+              <option value="zip">🗂️ Individual Chapter Files (.ZIP)</option>
+            </select>
+          </div>
+
+          <!-- Language Selector -->
+          <div class="space-y-1">
+            <label class="font-medium text-slate-400">Language Filter</label>
+            <select id="languageSelect" onchange="changeLanguage()" class="w-full px-3 py-2 rounded-xl bg-dark-card border border-dark-border text-slate-200 focus:outline-none focus:border-brand-500">
+              <option value="en">English (en)</option>
+            </select>
+          </div>
+
+          <!-- Quality Toggle -->
+          <div class="space-y-1">
+            <label class="font-medium text-slate-400">Image Quality</label>
+            <select id="dataSaver" class="w-full px-3 py-2 rounded-xl bg-dark-card border border-dark-border text-slate-200 focus:outline-none focus:border-brand-500">
+              <option value="false">✨ High Quality (Original)</option>
+              <option value="true">⚡ Data Saver (Faster download)</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- Chapter List Table / Grid -->
+      <section class="rounded-3xl bg-dark-card/90 border border-dark-border/80 overflow-hidden shadow-xl">
+        <!-- Chapter Table Header Toolbar -->
+        <div class="px-6 py-4 bg-dark-surface/80 border-b border-dark-border flex flex-wrap items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <h3 class="font-bold text-white text-base flex items-center gap-2">
+              <i data-lucide="layers" class="w-4 h-4 text-brand-400"></i>
+              <span>Select Chapters</span>
+            </h3>
+            <span id="selectedCountBadge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-brand-500/20 text-brand-300 border border-brand-500/30">
+              0 selected
+            </span>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <!-- Filter search inside chapters -->
+            <div class="relative">
+              <input 
+                type="text" 
+                id="chapterFilterInput" 
+                placeholder="Filter chapter number or title..." 
+                class="w-48 sm:w-64 px-3 py-1.5 pl-8 rounded-xl bg-dark-card border border-dark-border text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-500"
+                oninput="filterChapterList()"
+              />
+              <i data-lucide="search" class="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-2.5"></i>
+            </div>
+
+            <button onclick="toggleSelectAllVisible()" class="px-3 py-1.5 rounded-xl bg-dark-surface hover:bg-dark-border text-xs font-semibold text-slate-300 hover:text-white border border-dark-border transition-colors">
+              Toggle Visible
+            </button>
+          </div>
+        </div>
+
+        <!-- Scrollable Chapter List -->
+        <div class="max-h-[500px] overflow-y-auto divide-y divide-dark-border/50" id="chapterListContainer">
+          <!-- Populated by app.js -->
+        </div>
+      </section>
+    </div>
+
+  </main>
+
+  <!-- Sticky Bottom Download Action Bar (Shown when chapters are selected) -->
+  <div id="stickyActionBar" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 hidden transition-all duration-300 w-11/12 max-w-xl">
+    <div class="rounded-2xl bg-dark-surface/95 border-2 border-brand-500/50 p-4 shadow-2xl backdrop-blur-xl flex items-center justify-between gap-4">
+      <div class="space-y-0.5">
+        <p class="text-sm font-bold text-white flex items-center gap-2">
+          <span id="stickySelectedCount">0</span> Chapters Selected
+          <span id="stickyFormatBadge" class="px-2 py-0.2 rounded-md bg-brand-500 text-[10px] font-extrabold uppercase text-white">PDF</span>
+        </p>
+        <p class="text-xs text-slate-400" id="stickyRangeText">From Ch. 1 to Ch. 10</p>
+      </div>
+
+      <button 
+        id="startDownloadBtn" 
+        onclick="triggerDownload()" 
+        class="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-brand-600 to-brand-accent hover:from-brand-500 hover:to-brand-accent/90 text-white font-extrabold text-sm shadow-xl shadow-brand-500/25 active:scale-95 transition-all"
+      >
+        <i data-lucide="download" class="w-4 h-4"></i>
+        <span>Download Now</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Download Progress Modal -->
+  <div id="progressModal" onclick="if(event.target === this) closeProgressModal()" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="max-w-md w-full rounded-3xl bg-dark-card border border-dark-border p-6 sm:p-8 space-y-6 shadow-2xl text-center relative overflow-hidden animate-scale-up">
+      
+      <!-- Top Right Close X Button -->
+      <button onclick="closeProgressModal()" class="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-dark-surface transition-colors z-10" title="Close modal">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <!-- Glow background -->
+      <div class="absolute -top-20 -left-20 w-40 h-40 bg-brand-500/20 rounded-full blur-2xl pointer-events-none"></div>
+
+      <!-- Icon state -->
+      <div class="mx-auto w-16 h-16 rounded-2xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center relative">
+        <i id="progressIcon" data-lucide="loader-2" class="w-8 h-8 text-brand-400 animate-spin"></i>
+      </div>
+
+      <!-- Title and status text -->
+      <div class="space-y-1.5">
+        <h3 id="progressModalTitle" class="text-xl font-bold font-heading text-white">Downloading Manga...</h3>
+        <p id="progressModalMsg" class="text-xs sm:text-sm text-slate-400">Initializing task pipeline...</p>
+      </div>
+
+      <!-- Progress Bar -->
+      <div class="space-y-2">
+        <div class="w-full bg-dark-surface rounded-full h-3 overflow-hidden border border-dark-border/80">
+          <div id="progressBarFill" class="bg-gradient-to-r from-brand-600 via-brand-500 to-brand-accent h-full w-0 transition-all duration-300 rounded-full"></div>
+        </div>
+        <div class="flex justify-between text-xs font-mono text-slate-400">
+          <span id="progressPageDetail">0 / 0 pages</span>
+          <span id="progressPercentDetail">0%</span>
+        </div>
+      </div>
+
+      <!-- Live Chapter / Step Pill -->
+      <div class="px-3.5 py-2 rounded-xl bg-dark-surface border border-dark-border text-xs text-slate-300 flex items-center justify-between">
+        <span class="text-slate-500">Current Phase:</span>
+        <span id="progressCurrentChapter" class="font-semibold text-brand-300">Scraping pages...</span>
+      </div>
+
+      <!-- Actions -->
+      <div id="progressModalActions" class="flex flex-wrap items-center justify-center gap-2 pt-2">
+        <button id="cancelTaskBtn" onclick="cancelActiveTask()" class="px-4 py-2.5 rounded-xl bg-dark-surface hover:bg-dark-border text-xs font-semibold text-slate-300 hover:text-white border border-dark-border transition-colors">
+          Cancel
+        </button>
+
+        <a id="downloadCompletedBtn" href="#" download class="hidden flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold text-xs shadow-lg shadow-emerald-500/20 active:scale-95 transition-all">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          <span>Save File (<span id="completedSizeText">0 MB</span>)</span>
+        </a>
+
+        <button id="kindleDirectBtn" onclick="openKindleModalFromProgress()" class="hidden flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold text-xs shadow-lg shadow-amber-500/20 active:scale-95 transition-all">
+          <i data-lucide="tablet" class="w-4 h-4"></i>
+          <span>Send to Kindle</span>
+        </button>
+
+        <button id="doneProgressBtn" onclick="closeProgressModal()" class="hidden px-4 py-2.5 rounded-xl bg-dark-surface hover:bg-dark-border text-xs font-bold text-slate-300 hover:text-white border border-dark-border transition-colors">
+          Done
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dedicated Send to Kindle Modal -->
+  <div id="kindleModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="max-w-lg w-full rounded-3xl bg-dark-card border border-dark-border p-6 sm:p-8 space-y-6 shadow-2xl relative overflow-hidden animate-scale-up text-left">
+      
+      <!-- Top header -->
+      <div class="flex items-center justify-between pb-3 border-b border-dark-border">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+            <i data-lucide="tablet" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold font-heading text-white text-lg">Send Manga to Kindle</h3>
+            <p class="text-xs text-slate-400">Lightweight, high-contrast e-ink optimized EPUB</p>
+          </div>
+        </div>
+        <button onclick="closeKindleModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-dark-surface">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- File info badge -->
+      <div class="p-3.5 rounded-2xl bg-dark-surface border border-dark-border space-y-1">
+        <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Target Manga File</p>
+        <p id="kindleModalFilename" class="text-sm font-bold text-white truncate">manga_title.epub</p>
+      </div>
+
+      <!-- Kindle Email Field -->
+      <div class="space-y-2">
+        <label class="text-xs font-semibold text-slate-300 flex items-center justify-between">
+          <span>Your Kindle Email Address</span>
+          <span class="text-[10px] text-amber-400 font-mono">@kindle.com</span>
+        </label>
+        <div class="flex items-center rounded-xl bg-dark-surface border border-dark-border px-3.5 py-2.5 focus-within:border-amber-500 focus-within:ring-2 focus-within:ring-amber-500/20">
+          <i data-lucide="mail" class="w-4 h-4 text-slate-400 mr-2 shrink-0"></i>
+          <input 
+            type="email" 
+            id="kindleEmailInput" 
+            value="nit.ratha01_t9Ucaw@kindle.com" 
+            placeholder="your_name@kindle.com"
+            class="w-full bg-transparent text-sm text-white focus:outline-none font-mono" 
+          />
+        </div>
+      </div>
+
+      <!-- Two Fast Methods -->
+      <div class="space-y-3">
+        <!-- Method 1: Official Amazon Web (Instant Drag & Drop up to 200MB) -->
+        <a 
+          id="amazonSendWebBtn" 
+          href="https://www.amazon.com/sendtokindle" 
+          target="_blank" 
+          rel="noreferrer"
+          class="w-full p-3.5 rounded-2xl bg-gradient-to-r from-amber-600/20 to-brand-500/20 border border-amber-500/30 hover:border-amber-500/60 flex items-center justify-between group transition-all"
+        >
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform">
+              <i data-lucide="external-link" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-white group-hover:text-amber-300 transition-colors">Official Amazon Send to Kindle (Web)</p>
+              <p class="text-[11px] text-slate-400">Instant upload up to 200MB with automatic Wi-Fi cloud sync</p>
+            </div>
+          </div>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 group-hover:text-white transition-colors"></i>
+        </a>
+
+        <!-- Method 2: Direct Email Dispatch -->
+        <button 
+          type="button" 
+          onclick="sendKindleEmailDirect()" 
+          id="sendKindleDirectBtn"
+          class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
+        >
+          <i data-lucide="send" class="w-4 h-4"></i>
+          <span>Send Directly to <span id="btnKindleEmailLabel" class="font-mono">nit.ratha01_t9Ucaw@kindle.com</span></span>
+        </button>
+
+        <!-- Method 3: Auto-Split Large Files into <45MB Kindle Volumes -->
+        <button 
+          type="button" 
+          onclick="splitFileForKindle()" 
+          id="splitKindleBtn"
+          class="w-full py-3 px-4 rounded-xl bg-dark-surface hover:bg-dark-border border border-amber-500/40 text-amber-300 hover:text-amber-200 font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-95"
+        >
+          <i data-lucide="scissors" class="w-4 h-4 text-amber-400"></i>
+          <span>⚡ Auto-Split & Compress into Kindle Volumes (<45MB)</span>
+        </button>
+      </div>
+
+      <!-- Notification message box -->
+      <div id="kindleStatusBox" class="hidden p-3 rounded-xl text-xs space-y-1">
+        <!-- Populated dynamically -->
+      </div>
+
+      <!-- Quick Amazon Tip Alert -->
+      <div class="p-3 rounded-xl bg-slate-900/60 border border-dark-border text-[11px] text-slate-400 flex items-start gap-2">
+        <i data-lucide="info" class="w-4 h-4 text-brand-400 shrink-0 mt-0.5"></i>
+        <span>
+          <strong>Amazon Tip:</strong> Make sure your personal email is added under your Amazon account's <em>"Approved Personal Document E-mail List"</em> at Amazon Manage Your Content and Devices.
+        </span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Downloads History Drawer -->
+  <div id="historyDrawer" class="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-dark-card border-l border-dark-border shadow-2xl transform translate-x-full transition-transform duration-300 flex flex-col">
+    <div class="p-5 border-b border-dark-border flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <i data-lucide="clock" class="w-5 h-5 text-brand-400"></i>
+        <h3 class="font-bold font-heading text-white text-lg">Downloads History</h3>
+      </div>
+      <button onclick="toggleHistoryDrawer()" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-dark-surface">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <div id="historyListContainer" class="flex-1 p-5 overflow-y-auto space-y-3">
+      <!-- Populated by app.js -->
+    </div>
+
+    <div class="p-4 border-t border-dark-border bg-dark-surface flex items-center justify-between">
+      <button onclick="clearHistory()" class="text-xs text-rose-400 hover:text-rose-300 font-semibold flex items-center gap-1">
+        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+        <span>Clear History</span>
+      </button>
+      <button onclick="toggleHistoryDrawer()" class="px-4 py-1.5 rounded-xl bg-dark-card text-xs font-semibold text-slate-300 border border-dark-border hover:bg-dark-border">
+        Close
+      </button>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="mt-auto border-t border-dark-border/40 py-6 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <p>MangaDrop &copy; 2026 — High Quality Manga Converter for Personal Reading</p>
+      <p class="text-slate-600">Supports PDF, EPUB3, CBZ with dynamic page scaling</p>
+    </div>
+  </footer>
+
+  <script src="/static/app.js"></script>
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>
